@@ -1,8 +1,6 @@
 # Salus — Disaster Response Resource Consensus Network
 
-[![CI](https://github.com/your-org/salus/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/salus/actions)
-[![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://python.org)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 
 > A distributed backend system that coordinates real-time emergency resource allocation across multiple Incident Command Posts (ICPs) using Raft consensus to guarantee no resource is ever double-dispatched, even under network partition.
 
@@ -45,7 +43,7 @@ docker-compose up
 
 ## Project Status
 
-🚧 **Phase 1 — Foundation** (In Progress)
+ **Phase 1 — Foundation** (In Progress)
 
 See the [readmes/](readmes/) directory for detailed documentation.
 
