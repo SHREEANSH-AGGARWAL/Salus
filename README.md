@@ -28,24 +28,8 @@ ICP Alpha (Leader) ◄──► ICP Bravo (Follower) ◄──► ICP Charlie (F
 - **Circuit-Breaker Fallback** — Rule-based dispatch when LLM is unavailable
 - **Immutable Audit Log** — Full traceability of every AI recommendation and IC decision
 
-## Quick Start
 
-```bash
-# Install
-pip install -e ".[dev]"
 
-# Run tests
-pytest tests/unit/ -v
-
-# Start 3-ICP cluster
-docker-compose up
-```
-
-## Project Status
-
- **Phase 1 — Foundation** (In Progress)
-
-See the [readmes/](readmes/) directory for detailed documentation.
 
 ## License
 
