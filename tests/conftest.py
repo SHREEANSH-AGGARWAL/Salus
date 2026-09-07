@@ -14,11 +14,9 @@ from salus.models.common import GeoLocation
 from salus.models.dispatch import DispatchOrder, DispatchStatus
 from salus.models.incident import Incident, IncidentSeverity, IncidentStatus, IncidentType
 from salus.models.resource import (
-    ConfirmationSource,
     Resource,
     ResourceCapabilities,
     ResourceStatus,
-    ResourceStateTransition,
     ResourceType,
 )
 from salus.models.zone import (
@@ -29,7 +27,6 @@ from salus.models.zone import (
     ZoneNeeds,
     ZonePriority,
 )
-
 
 # ============================================================================
 # Resource Fixtures
@@ -303,3 +300,15 @@ def sample_dispatch_order() -> DispatchOrder:
         requesting_icp_id="icp-alpha",
         status=DispatchStatus.PENDING,
     )
+
+
+def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
+    """Automatically tag tests with markers based on directory location."""
+    for item in items:
+        fspath_str = str(item.fspath)
+        if "tests/unit" in fspath_str:
+            item.add_marker(pytest.mark.unit)
+        elif "tests/integration" in fspath_str:
+            item.add_marker(pytest.mark.integration)
+        elif "tests/chaos" in fspath_str:
+            item.add_marker(pytest.mark.chaos)

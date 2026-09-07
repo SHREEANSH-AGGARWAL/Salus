@@ -34,21 +34,21 @@ class IncidentType(StrEnum):
 class IncidentSeverity(StrEnum):
     """Overall incident severity — determines resource mobilization level."""
 
-    LEVEL_1 = "level_1"    # Local — single agency can handle
-    LEVEL_2 = "level_2"    # Regional — multiple agencies needed
-    LEVEL_3 = "level_3"    # State — state-level mobilization
-    LEVEL_4 = "level_4"    # National — national disaster declaration
-    LEVEL_5 = "level_5"    # International — UN/international assistance
+    LEVEL_1 = "level_1"  # Local — single agency can handle
+    LEVEL_2 = "level_2"  # Regional — multiple agencies needed
+    LEVEL_3 = "level_3"  # State — state-level mobilization
+    LEVEL_4 = "level_4"  # National — national disaster declaration
+    LEVEL_5 = "level_5"  # International — UN/international assistance
 
 
 class IncidentStatus(StrEnum):
     """Lifecycle status of an incident."""
 
-    DECLARED = "declared"          # Incident declared, mobilization starting
-    ACTIVE = "active"              # Active response operations ongoing
-    CONTAINED = "contained"        # Situation stabilized, response winding down
-    RECOVERY = "recovery"          # Immediate threat over, recovery operations
-    CLOSED = "closed"              # Incident closed
+    DECLARED = "declared"  # Incident declared, mobilization starting
+    ACTIVE = "active"  # Active response operations ongoing
+    CONTAINED = "contained"  # Situation stabilized, response winding down
+    RECOVERY = "recovery"  # Immediate threat over, recovery operations
+    CLOSED = "closed"  # Incident closed
 
 
 class IncidentSummary(BaseModel):
@@ -79,7 +79,9 @@ class Incident(BaseModel):
     updated_at: datetime = Field(default_factory=datetime.utcnow)
 
     # Identity
-    name: str = Field(..., min_length=1, description="Incident name (e.g., '2026 Delhi Earthquake')")
+    name: str = Field(
+        ..., min_length=1, description="Incident name (e.g., '2026 Delhi Earthquake')"
+    )
     incident_type: IncidentType = Field(..., description="Type of disaster")
     severity: IncidentSeverity = Field(IncidentSeverity.LEVEL_2, description="Severity level")
     status: IncidentStatus = Field(IncidentStatus.DECLARED, description="Current status")
@@ -96,12 +98,8 @@ class Incident(BaseModel):
     )
 
     # Command
-    incident_commander_id: str | None = Field(
-        None, description="Current Incident Commander (IC)"
-    )
-    unified_command: bool = Field(
-        False, description="True if multiple agencies in Unified Command"
-    )
+    incident_commander_id: str | None = Field(None, description="Current Incident Commander (IC)")
+    unified_command: bool = Field(False, description="True if multiple agencies in Unified Command")
 
     # Statistics (updated periodically)
     summary: IncidentSummary = Field(
@@ -114,16 +112,20 @@ class Incident(BaseModel):
     contained_at: datetime | None = Field(None)
     closed_at: datetime | None = Field(None)
 
-    model_config = {"json_schema_extra": {"examples": [
-        {
-            "name": "2026 Delhi NCR Earthquake",
-            "incident_type": "earthquake",
-            "severity": "level_3",
-            "status": "active",
-            "description": "7.2 magnitude earthquake, epicenter 40km NW of Delhi. "
-            "Multiple building collapses in Old Delhi and East Delhi. "
-            "Infrastructure damage to roads, bridges, and utilities.",
-            "location_description": "Delhi National Capital Region",
-            "unified_command": True,
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "name": "2026 Delhi NCR Earthquake",
+                    "incident_type": "earthquake",
+                    "severity": "level_3",
+                    "status": "active",
+                    "description": "7.2 magnitude earthquake, epicenter 40km NW of Delhi. "
+                    "Multiple building collapses in Old Delhi and East Delhi. "
+                    "Infrastructure damage to roads, bridges, and utilities.",
+                    "location_description": "Delhi National Capital Region",
+                    "unified_command": True,
+                }
+            ]
         }
-    ]}}
+    }

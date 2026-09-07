@@ -36,23 +36,23 @@ class ZonePriority(IntEnum):
 class DamageLevel(StrEnum):
     """Structural damage assessment categories."""
 
-    CATASTROPHIC = "catastrophic"    # >70% structures collapsed/destroyed
-    SEVERE = "severe"                # 40-70% structures damaged significantly
-    MODERATE = "moderate"            # 10-40% structures with damage
-    LIGHT = "light"                  # <10% structures with minor damage
-    NONE = "none"                    # No visible damage
-    UNKNOWN = "unknown"              # Not yet assessed
+    CATASTROPHIC = "catastrophic"  # >70% structures collapsed/destroyed
+    SEVERE = "severe"  # 40-70% structures damaged significantly
+    MODERATE = "moderate"  # 10-40% structures with damage
+    LIGHT = "light"  # <10% structures with minor damage
+    NONE = "none"  # No visible damage
+    UNKNOWN = "unknown"  # Not yet assessed
 
 
 class AccessStatus(StrEnum):
     """How accessible is this zone for response teams."""
 
-    OPEN = "open"                    # Roads clear, full access
-    RESTRICTED = "restricted"        # Some routes blocked, alternative available
-    AIR_ONLY = "air_only"            # Ground routes blocked, helicopter access only
-    WATER_ONLY = "water_only"        # Flooded, boat access only
-    CUT_OFF = "cut_off"              # No known access route — requires engineering
-    UNKNOWN = "unknown"              # Not yet assessed
+    OPEN = "open"  # Roads clear, full access
+    RESTRICTED = "restricted"  # Some routes blocked, alternative available
+    AIR_ONLY = "air_only"  # Ground routes blocked, helicopter access only
+    WATER_ONLY = "water_only"  # Flooded, boat access only
+    CUT_OFF = "cut_off"  # No known access route — requires engineering
+    UNKNOWN = "unknown"  # Not yet assessed
 
 
 class ZoneNeeds(BaseModel):
@@ -97,7 +97,9 @@ class DisasterZone(BaseModel):
 
     # Identity
     name: str = Field(..., min_length=1, description="Zone name (e.g., 'Sector 7 — Old City')")
-    zone_code: str = Field(..., min_length=1, max_length=10, description="Short code (e.g., 'Z-07')")
+    zone_code: str = Field(
+        ..., min_length=1, max_length=10, description="Short code (e.g., 'Z-07')"
+    )
 
     # Geography
     boundary: ZoneBoundary
@@ -113,15 +115,18 @@ class DisasterZone(BaseModel):
     last_assessed_at: datetime | None = Field(None, description="When zone was last assessed")
     last_assessed_by: str | None = Field(None, description="Who/what performed last assessment")
     assessment_confidence: float = Field(
-        0.0, ge=0.0, le=1.0,
-        description="Confidence in current assessment (0=unknown, 1=verified on-ground)"
+        0.0,
+        ge=0.0,
+        le=1.0,
+        description="Confidence in current assessment (0=unknown, 1=verified on-ground)",
     )
 
     # Time tracking
     time_since_last_contact_minutes: int = Field(
-        0, ge=0,
+        0,
+        ge=0,
         description="Minutes since last communication with this zone. "
-        "Long gaps increase priority — no contact ≠ no need."
+        "Long gaps increase priority — no contact ≠ no need.",
     )
 
     # Resource tracking (populated from Raft state)
@@ -147,25 +152,29 @@ class DisasterZone(BaseModel):
         """True if there are estimated trapped persons."""
         return self.needs.estimated_trapped > 0
 
-    model_config = {"json_schema_extra": {"examples": [
-        {
-            "name": "Sector 7 — Old City Market",
-            "zone_code": "Z-07",
-            "boundary": {
-                "center": {"latitude": 28.6562, "longitude": 77.2310},
-                "radius_km": 1.5,
-            },
-            "address_description": "Old Delhi market area, densely populated, narrow streets",
-            "priority": 1,
-            "damage_level": "catastrophic",
-            "access_status": "restricted",
-            "needs": {
-                "needs_sar": True,
-                "needs_medical": True,
-                "estimated_trapped": 45,
-                "estimated_injured": 120,
-                "estimated_displaced": 2000,
-                "estimated_population": 15000,
-            },
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "name": "Sector 7 — Old City Market",
+                    "zone_code": "Z-07",
+                    "boundary": {
+                        "center": {"latitude": 28.6562, "longitude": 77.2310},
+                        "radius_km": 1.5,
+                    },
+                    "address_description": "Old Delhi market area, densely populated, narrow streets",
+                    "priority": 1,
+                    "damage_level": "catastrophic",
+                    "access_status": "restricted",
+                    "needs": {
+                        "needs_sar": True,
+                        "needs_medical": True,
+                        "estimated_trapped": 45,
+                        "estimated_injured": 120,
+                        "estimated_displaced": 2000,
+                        "estimated_population": 15000,
+                    },
+                }
+            ]
         }
-    ]}}
+    }

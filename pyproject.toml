@@ -61,9 +61,13 @@ dev = [
 salus-node = "salus.main:main"
 salus-simulate = "simulation.cli:main"
 
+[tool.hatch.build.targets.wheel]
+packages = ["salus", "simulation"]
+
 [tool.ruff]
 target-version = "py312"
 line-length = 100
+extend-exclude = ["salus/grpc/raft_pb2.py", "salus/grpc/raft_pb2_grpc.py"]
 
 [tool.ruff.lint]
 select = [
@@ -78,6 +82,21 @@ select = [
     "TCH",  # flake8-type-checking
     "RUF",  # ruff-specific rules
 ]
+ignore = [
+    "E501",   # Line length handled by ruff format
+    "TC001",  # Pydantic v2 & FastAPI require runtime type availability
+    "TC002",
+    "TC003",
+    "B905",   # zip without strict=
+    "N806",   # Mathematical constants/variables (e.g. R in Haversine)
+    "RUF001", # Unicode symbols in strings
+    "RUF002", # Unicode dashes in docstrings/citations
+    "B904",   # HTTPException wrapping
+]
+
+[tool.ruff.lint.per-file-ignores]
+"salus/grpc/server.py" = ["N802"]
+"tests/*" = ["B007", "F841"]
 
 [tool.black]
 line-length = 100
@@ -85,11 +104,19 @@ target-version = ["py312"]
 
 [tool.mypy]
 python_version = "3.12"
-strict = true
-warn_return_any = true
+plugins = ["pydantic.mypy"]
+exclude = [
+    "salus/grpc/raft_pb2",
+]
+ignore_missing_imports = true
 warn_unused_configs = true
 
+[[tool.mypy.overrides]]
+module = "salus.grpc.*"
+ignore_errors = true
+
 [tool.pytest.ini_options]
+pythonpath = ["."]
 asyncio_mode = "auto"
 testpaths = ["tests"]
 markers = [

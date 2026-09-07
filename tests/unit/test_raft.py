@@ -11,15 +11,12 @@ These are fast, in-memory tests with no network I/O.
 
 from __future__ import annotations
 
-import asyncio
-
 import pytest
 
 from salus.dispatch.state_machine import DispatchStateMachine
 from salus.raft.log import RaftLog
 from salus.raft.log_entry import CommandType, LogEntry
 from salus.raft.node import NodeState, RaftNode
-
 
 # ============================================================================
 # RaftLog Tests
@@ -144,7 +141,9 @@ class TestRaftLog:
 
         # Leader sends entry at index 2 with term 2 (conflict)
         new_entries = [
-            LogEntry(term=2, index=2, command_type=CommandType.ZONE_REGISTER, payload='{"name":"Z"}'),
+            LogEntry(
+                term=2, index=2, command_type=CommandType.ZONE_REGISTER, payload='{"name":"Z"}'
+            ),
         ]
         result = log.append_entries(prev_log_index=1, prev_log_term=1, entries=new_entries)
         assert result is True
@@ -223,8 +222,8 @@ class TestRaftNode:
 
     def test_quorum_sizes(self) -> None:
         """Verify quorum calculation for different cluster sizes."""
-        assert self._make_node(peers=["n2"]).quorum_size == 2          # 2 nodes → quorum 2
-        assert self._make_node(peers=["n2", "n3"]).quorum_size == 2    # 3 → 2
+        assert self._make_node(peers=["n2"]).quorum_size == 2  # 2 nodes → quorum 2
+        assert self._make_node(peers=["n2", "n3"]).quorum_size == 2  # 3 → 2
         assert self._make_node(peers=["n2", "n3", "n4"]).quorum_size == 3  # 4 → 3
         assert self._make_node(peers=["n2", "n3", "n4", "n5"]).quorum_size == 3  # 5 → 3
 
@@ -233,12 +232,14 @@ class TestRaftNode:
     def test_vote_granted_when_not_voted(self) -> None:
         """Grant vote if we haven't voted this term and candidate's log is up-to-date."""
         node = self._make_node()
-        response = node.handle_request_vote({
-            "term": 1,
-            "candidate_id": "node-2",
-            "last_log_index": 0,
-            "last_log_term": 0,
-        })
+        response = node.handle_request_vote(
+            {
+                "term": 1,
+                "candidate_id": "node-2",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         assert response["vote_granted"] is True
         assert node.voted_for == "node-2"
         assert node.current_term == 1
@@ -247,49 +248,59 @@ class TestRaftNode:
         """Deny vote if we already voted for a different candidate this term."""
         node = self._make_node()
         # Vote for node-2
-        node.handle_request_vote({
-            "term": 1,
-            "candidate_id": "node-2",
-            "last_log_index": 0,
-            "last_log_term": 0,
-        })
+        node.handle_request_vote(
+            {
+                "term": 1,
+                "candidate_id": "node-2",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         # node-3 asks for vote in same term
-        response = node.handle_request_vote({
-            "term": 1,
-            "candidate_id": "node-3",
-            "last_log_index": 0,
-            "last_log_term": 0,
-        })
+        response = node.handle_request_vote(
+            {
+                "term": 1,
+                "candidate_id": "node-3",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         assert response["vote_granted"] is False
 
     def test_vote_granted_same_candidate_again(self) -> None:
         """Granting vote to the same candidate again is idempotent."""
         node = self._make_node()
-        node.handle_request_vote({
-            "term": 1,
-            "candidate_id": "node-2",
-            "last_log_index": 0,
-            "last_log_term": 0,
-        })
+        node.handle_request_vote(
+            {
+                "term": 1,
+                "candidate_id": "node-2",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         # Same candidate asks again
-        response = node.handle_request_vote({
-            "term": 1,
-            "candidate_id": "node-2",
-            "last_log_index": 0,
-            "last_log_term": 0,
-        })
+        response = node.handle_request_vote(
+            {
+                "term": 1,
+                "candidate_id": "node-2",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         assert response["vote_granted"] is True
 
     def test_vote_denied_stale_term(self) -> None:
         """Deny vote if candidate's term < our term."""
         node = self._make_node()
         node.current_term = 5
-        response = node.handle_request_vote({
-            "term": 3,
-            "candidate_id": "node-2",
-            "last_log_index": 0,
-            "last_log_term": 0,
-        })
+        response = node.handle_request_vote(
+            {
+                "term": 3,
+                "candidate_id": "node-2",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         assert response["vote_granted"] is False
         assert response["term"] == 5
 
@@ -299,12 +310,14 @@ class TestRaftNode:
         # Give our node a log entry at term 2
         node.log.append(term=2, command_type=CommandType.NOOP, payload="{}")
 
-        response = node.handle_request_vote({
-            "term": 3,
-            "candidate_id": "node-2",
-            "last_log_index": 0,
-            "last_log_term": 1,  # Candidate's last term is 1, ours is 2
-        })
+        response = node.handle_request_vote(
+            {
+                "term": 3,
+                "candidate_id": "node-2",
+                "last_log_index": 0,
+                "last_log_term": 1,  # Candidate's last term is 1, ours is 2
+            }
+        )
         assert response["vote_granted"] is False
 
     def test_step_down_on_higher_term_vote_request(self) -> None:
@@ -313,12 +326,14 @@ class TestRaftNode:
         node.current_term = 1
         node.state = NodeState.CANDIDATE
 
-        node.handle_request_vote({
-            "term": 5,
-            "candidate_id": "node-2",
-            "last_log_index": 0,
-            "last_log_term": 0,
-        })
+        node.handle_request_vote(
+            {
+                "term": 5,
+                "candidate_id": "node-2",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         assert node.state == NodeState.FOLLOWER
         assert node.current_term == 5
 
@@ -327,14 +342,16 @@ class TestRaftNode:
     def test_accept_heartbeat(self) -> None:
         """Follower accepts a valid heartbeat (empty AppendEntries)."""
         node = self._make_node()
-        response = node.handle_append_entries({
-            "term": 1,
-            "leader_id": "node-2",
-            "prev_log_index": 0,
-            "prev_log_term": 0,
-            "entries": [],
-            "leader_commit": 0,
-        })
+        response = node.handle_append_entries(
+            {
+                "term": 1,
+                "leader_id": "node-2",
+                "prev_log_index": 0,
+                "prev_log_term": 0,
+                "entries": [],
+                "leader_commit": 0,
+            }
+        )
         assert response["success"] is True
         assert node.leader_id == "node-2"
         assert node.current_term == 1
@@ -343,14 +360,16 @@ class TestRaftNode:
         """Reject AppendEntries from a leader with a stale term."""
         node = self._make_node()
         node.current_term = 5
-        response = node.handle_append_entries({
-            "term": 3,
-            "leader_id": "node-2",
-            "prev_log_index": 0,
-            "prev_log_term": 0,
-            "entries": [],
-            "leader_commit": 0,
-        })
+        response = node.handle_append_entries(
+            {
+                "term": 3,
+                "leader_id": "node-2",
+                "prev_log_index": 0,
+                "prev_log_term": 0,
+                "entries": [],
+                "leader_commit": 0,
+            }
+        )
         assert response["success"] is False
         assert response["term"] == 5
 
@@ -358,17 +377,25 @@ class TestRaftNode:
         """Follower accepts and appends new entries."""
         node = self._make_node()
         entries = [
-            {"term": 1, "index": 1, "command_type": "noop", "payload": "{}",
-             "timestamp": "2026-01-01T00:00:00", "committed": False},
+            {
+                "term": 1,
+                "index": 1,
+                "command_type": "noop",
+                "payload": "{}",
+                "timestamp": "2026-01-01T00:00:00",
+                "committed": False,
+            },
         ]
-        response = node.handle_append_entries({
-            "term": 1,
-            "leader_id": "node-2",
-            "prev_log_index": 0,
-            "prev_log_term": 0,
-            "entries": entries,
-            "leader_commit": 0,
-        })
+        response = node.handle_append_entries(
+            {
+                "term": 1,
+                "leader_id": "node-2",
+                "prev_log_index": 0,
+                "prev_log_term": 0,
+                "entries": entries,
+                "leader_commit": 0,
+            }
+        )
         assert response["success"] is True
         assert node.log.last_index == 1
 
@@ -377,17 +404,25 @@ class TestRaftNode:
         node = self._make_node()
         # First append an entry
         entries = [
-            {"term": 1, "index": 1, "command_type": "noop", "payload": "{}",
-             "timestamp": "2026-01-01T00:00:00", "committed": False},
+            {
+                "term": 1,
+                "index": 1,
+                "command_type": "noop",
+                "payload": "{}",
+                "timestamp": "2026-01-01T00:00:00",
+                "committed": False,
+            },
         ]
-        node.handle_append_entries({
-            "term": 1,
-            "leader_id": "node-2",
-            "prev_log_index": 0,
-            "prev_log_term": 0,
-            "entries": entries,
-            "leader_commit": 1,  # Leader has committed this entry
-        })
+        node.handle_append_entries(
+            {
+                "term": 1,
+                "leader_id": "node-2",
+                "prev_log_index": 0,
+                "prev_log_term": 0,
+                "entries": entries,
+                "leader_commit": 1,  # Leader has committed this entry
+            }
+        )
         assert node.log.commit_index == 1
 
     def test_candidate_steps_down_on_append_entries(self) -> None:
@@ -396,14 +431,16 @@ class TestRaftNode:
         node.state = NodeState.CANDIDATE
         node.current_term = 1
 
-        response = node.handle_append_entries({
-            "term": 1,
-            "leader_id": "node-2",
-            "prev_log_index": 0,
-            "prev_log_term": 0,
-            "entries": [],
-            "leader_commit": 0,
-        })
+        response = node.handle_append_entries(
+            {
+                "term": 1,
+                "leader_id": "node-2",
+                "prev_log_index": 0,
+                "prev_log_term": 0,
+                "entries": [],
+                "leader_commit": 0,
+            }
+        )
         assert response["success"] is True
         assert node.state == NodeState.FOLLOWER
 
@@ -414,24 +451,36 @@ class TestRaftNode:
         node = self._make_node()
 
         # Vote for node-2 in term 1
-        r1 = node.handle_request_vote({
-            "term": 1, "candidate_id": "node-2",
-            "last_log_index": 0, "last_log_term": 0,
-        })
+        r1 = node.handle_request_vote(
+            {
+                "term": 1,
+                "candidate_id": "node-2",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         assert r1["vote_granted"] is True
 
         # node-3 asks in same term — must be denied
-        r2 = node.handle_request_vote({
-            "term": 1, "candidate_id": "node-3",
-            "last_log_index": 0, "last_log_term": 0,
-        })
+        r2 = node.handle_request_vote(
+            {
+                "term": 1,
+                "candidate_id": "node-3",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         assert r2["vote_granted"] is False
 
         # node-3 asks in term 2 — can vote now (new term)
-        r3 = node.handle_request_vote({
-            "term": 2, "candidate_id": "node-3",
-            "last_log_index": 0, "last_log_term": 0,
-        })
+        r3 = node.handle_request_vote(
+            {
+                "term": 2,
+                "candidate_id": "node-3",
+                "last_log_index": 0,
+                "last_log_term": 0,
+            }
+        )
         assert r3["vote_granted"] is True
         assert node.voted_for == "node-3"
 
@@ -444,12 +493,14 @@ class TestRaftNode:
         node.log.append(term=3, command_type=CommandType.NOOP, payload="{}")
 
         # Candidate with shorter log in lower term
-        response = node.handle_request_vote({
-            "term": 4,
-            "candidate_id": "node-2",
-            "last_log_index": 1,
-            "last_log_term": 1,
-        })
+        response = node.handle_request_vote(
+            {
+                "term": 4,
+                "candidate_id": "node-2",
+                "last_log_index": 1,
+                "last_log_term": 1,
+            }
+        )
         assert response["vote_granted"] is False
 
     # === Read-Index ===

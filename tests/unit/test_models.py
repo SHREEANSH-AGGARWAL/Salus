@@ -7,31 +7,21 @@ and data model invariants.
 
 from __future__ import annotations
 
-import pytest
-
 from salus.models.agency import Agency, AgencyType, ICPStatus
 from salus.models.dispatch import DispatchOrder, DispatchStatus
 from salus.models.incident import Incident, IncidentSeverity, IncidentStatus, IncidentType
 from salus.models.resource import (
-    ConfirmationSource,
     GeoLocation,
     Resource,
     ResourceCapabilities,
     ResourceStatus,
-    ResourceStateTransition,
     ResourceType,
-    is_valid_transition,
 )
 from salus.models.zone import (
-    AccessStatus,
     DamageLevel,
     DisasterZone,
-    ZoneBoundary,
-    ZoneNeeds,
     ZonePriority,
 )
-from salus.models.zone import GeoLocation as ZoneGeoLocation
-
 
 # ============================================================================
 # Resource Model Tests
@@ -84,12 +74,18 @@ class TestResource:
 
     def test_resource_id_auto_generated(self) -> None:
         r1 = Resource(
-            name="R1", callsign="R-1", resource_type=ResourceType.FIRE_ENGINE,
-            owning_agency_id="a1", home_base=GeoLocation(latitude=28.5, longitude=77.2),
+            name="R1",
+            callsign="R-1",
+            resource_type=ResourceType.FIRE_ENGINE,
+            owning_agency_id="a1",
+            home_base=GeoLocation(latitude=28.5, longitude=77.2),
         )
         r2 = Resource(
-            name="R2", callsign="R-2", resource_type=ResourceType.FIRE_ENGINE,
-            owning_agency_id="a1", home_base=GeoLocation(latitude=28.5, longitude=77.2),
+            name="R2",
+            callsign="R-2",
+            resource_type=ResourceType.FIRE_ENGINE,
+            owning_agency_id="a1",
+            home_base=GeoLocation(latitude=28.5, longitude=77.2),
         )
         assert r1.id != r2.id
 
@@ -101,7 +97,8 @@ class TestResource:
 
     def test_fatigue_detection(self) -> None:
         resource = Resource(
-            name="Tired", callsign="TRD-1",
+            name="Tired",
+            callsign="TRD-1",
             resource_type=ResourceType.SAR_TEAM_URBAN,
             owning_agency_id="a1",
             home_base=GeoLocation(latitude=28.5, longitude=77.2),

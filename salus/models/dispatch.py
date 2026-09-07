@@ -21,21 +21,21 @@ from salus.models.zone import ZonePriority
 class DispatchStatus(StrEnum):
     """Status of a dispatch order as it moves through the pipeline."""
 
-    PENDING = "pending"                          # Incident reported, awaiting assessment
-    ASSESSING = "assessing"                      # Damage Assessment Agent running
-    MATCHING = "matching"                        # Resource Matching Agent running
-    ROUTING = "routing"                          # Routing Agent running
-    RECOMMENDING = "recommending"                # Decision Agent producing recommendation
+    PENDING = "pending"  # Incident reported, awaiting assessment
+    ASSESSING = "assessing"  # Damage Assessment Agent running
+    MATCHING = "matching"  # Resource Matching Agent running
+    ROUTING = "routing"  # Routing Agent running
+    RECOMMENDING = "recommending"  # Decision Agent producing recommendation
     AWAITING_CONFIRMATION = "awaiting_confirmation"  # Waiting for IC gate
-    CONFIRMED = "confirmed"                      # IC confirmed dispatch
-    REJECTED = "rejected"                        # IC rejected recommendation
-    OVERRIDDEN = "overridden"                    # IC overrode with different assignment
-    COMMITTED = "committed"                      # Raft log committed — resource dispatched
-    DISPATCHED = "dispatched"                    # Resource en route
-    ON_SCENE = "on_scene"                        # Resource arrived at zone
-    COMPLETED = "completed"                      # Mission completed, resource returning
-    FAILED = "failed"                            # Pipeline failed
-    FALLBACK = "fallback"                        # Circuit-breaker activated, rule-based dispatch
+    CONFIRMED = "confirmed"  # IC confirmed dispatch
+    REJECTED = "rejected"  # IC rejected recommendation
+    OVERRIDDEN = "overridden"  # IC overrode with different assignment
+    COMMITTED = "committed"  # Raft log committed — resource dispatched
+    DISPATCHED = "dispatched"  # Resource en route
+    ON_SCENE = "on_scene"  # Resource arrived at zone
+    COMPLETED = "completed"  # Mission completed, resource returning
+    FAILED = "failed"  # Pipeline failed
+    FALLBACK = "fallback"  # Circuit-breaker activated, rule-based dispatch
 
 
 class DamageAssessmentResult(BaseModel):
@@ -76,9 +76,7 @@ class RouteResult(BaseModel):
     resource_id: str = Field(..., description="Resource being routed")
     zone_id: str = Field(..., description="Destination zone")
     route_description: str = Field("", description="Human-readable route")
-    estimated_travel_time_minutes: float = Field(
-        0.0, ge=0, description="Estimated travel time"
-    )
+    estimated_travel_time_minutes: float = Field(0.0, ge=0, description="Estimated travel time")
     distance_km: float = Field(0.0, ge=0, description="Route distance")
     obstacles: list[str] = Field(
         default_factory=list, description="Obstacles on route (blocked roads, bridges down)"
@@ -113,9 +111,7 @@ class DispatchOrder(BaseModel):
     resource_match: ResourceMatchResult | None = Field(
         None, description="Resource Matching Agent output"
     )
-    route: RouteResult | None = Field(
-        None, description="Routing Agent output"
-    )
+    route: RouteResult | None = Field(None, description="Routing Agent output")
     protocol_recommendation: str | None = Field(
         None, description="Protocol Agent — recommended ICS procedure"
     )
@@ -128,7 +124,8 @@ class DispatchOrder(BaseModel):
 
     # Final assignment
     assigned_resource_id: str | None = Field(
-        None, description="Resource actually dispatched (may differ from recommendation if overridden)"
+        None,
+        description="Resource actually dispatched (may differ from recommendation if overridden)",
     )
     assigned_resource_name: str | None = Field(None, description="Resource name for display")
 
@@ -147,15 +144,19 @@ class DispatchOrder(BaseModel):
     used_fallback: bool = Field(False, description="True if circuit-breaker activated")
     error: str | None = Field(None, description="Error message if pipeline failed")
 
-    model_config = {"json_schema_extra": {"examples": [
-        {
-            "incident_id": "inc-001",
-            "zone_id": "zone-007",
-            "requesting_icp_id": "icp-alpha",
-            "status": "committed",
-            "assigned_resource_id": "res-alpha-7",
-            "assigned_resource_name": "SAR Team Alpha",
-            "commander_id": "cmd-vikram",
-            "confirmation_source": "commander",
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "incident_id": "inc-001",
+                    "zone_id": "zone-007",
+                    "requesting_icp_id": "icp-alpha",
+                    "status": "committed",
+                    "assigned_resource_id": "res-alpha-7",
+                    "assigned_resource_name": "SAR Team Alpha",
+                    "commander_id": "cmd-vikram",
+                    "confirmation_source": "commander",
+                }
+            ]
         }
-    ]}}
+    }
