@@ -30,10 +30,10 @@ logger = structlog.get_logger()
 class GateAction(StrEnum):
     """Actions the Incident Commander can take at the gate."""
 
-    CONFIRM = "confirm"        # Accept AI recommendation as-is
-    REJECT = "reject"          # Reject — do not dispatch
-    OVERRIDE = "override"      # Accept but change resource/zone assignment
-    TIMEOUT = "timeout"        # No response within timeout → auto-reject
+    CONFIRM = "confirm"  # Accept AI recommendation as-is
+    REJECT = "reject"  # Reject — do not dispatch
+    OVERRIDE = "override"  # Accept but change resource/zone assignment
+    TIMEOUT = "timeout"  # No response within timeout → auto-reject
 
 
 class PendingConfirmation(BaseModel):
@@ -46,9 +46,7 @@ class PendingConfirmation(BaseModel):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     created_at: datetime = Field(default_factory=datetime.utcnow)
-    expires_at: datetime = Field(
-        default_factory=lambda: datetime.utcnow() + timedelta(seconds=120)
-    )
+    expires_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(seconds=120))
 
     # What's being recommended
     dispatch_order_id: str = Field(..., description="Dispatch order ID")
@@ -70,9 +68,7 @@ class PendingConfirmation(BaseModel):
     commander_id: str | None = Field(None)
     commander_agency_id: str | None = Field(None)
     commander_notes: str | None = Field(None)
-    override_resource_id: str | None = Field(
-        None, description="Different resource if IC overrides"
-    )
+    override_resource_id: str | None = Field(None, description="Different resource if IC overrides")
 
     @property
     def is_expired(self) -> bool:
@@ -337,8 +333,7 @@ class CommanderGate:
 
         if confirmation.is_expired:
             raise ValueError(
-                f"Confirmation {confirmation_id} has expired "
-                f"(timeout: {self.timeout_seconds}s)"
+                f"Confirmation {confirmation_id} has expired (timeout: {self.timeout_seconds}s)"
             )
 
         return confirmation

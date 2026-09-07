@@ -64,9 +64,10 @@ def match_resources_to_zone(
 
     for resource in resources:
         # Filter: only available resources (or uncertain if flagged)
-        if resource.status != ResourceStatus.AVAILABLE:
-            if not (include_uncertain and resource.status == ResourceStatus.NEEDS_RESUPPLY):
-                continue
+        if resource.status != ResourceStatus.AVAILABLE and not (
+            include_uncertain and resource.status == ResourceStatus.NEEDS_RESUPPLY
+        ):
+            continue
 
         # Filter: check if resource can access this zone
         if not _can_access_zone(resource, zone):
@@ -77,16 +78,18 @@ def match_resources_to_zone(
 
         if score > 0.0:
             distance = _calculate_distance(resource, zone)
-            candidates.append(MatchResult(
-                resource_id=resource.id,
-                resource_name=resource.name,
-                resource_type=resource.resource_type,
-                score=score,
-                reasoning=reasoning,
-                distance_km=distance,
-                capability_matches=matches,
-                capability_gaps=gaps,
-            ))
+            candidates.append(
+                MatchResult(
+                    resource_id=resource.id,
+                    resource_name=resource.name,
+                    resource_type=resource.resource_type,
+                    score=score,
+                    reasoning=reasoning,
+                    distance_km=distance,
+                    capability_matches=matches,
+                    capability_gaps=gaps,
+                )
+            )
 
     # Sort by score (descending), then distance (ascending) as tiebreaker
     candidates.sort(key=lambda m: (-m.score, m.distance_km))
@@ -116,9 +119,7 @@ def _can_access_zone(resource: Resource, zone: DisasterZone) -> bool:
     return True
 
 
-def _score_match(
-    resource: Resource, zone: DisasterZone
-) -> tuple[float, list[str], list[str], str]:
+def _score_match(resource: Resource, zone: DisasterZone) -> tuple[float, list[str], list[str], str]:
     """Score how well a resource matches a zone's needs.
 
     Returns:

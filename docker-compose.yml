@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  icp-alpha:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: salus-icp-alpha
+    hostname: icp-alpha
+    environment:
+      - SALUS_NODE_ID=alpha
+      - SALUS_ICP_NAME=ICP Alpha (Fire Department)
+      - SALUS_ICP_CODE=ICP-A
+      - SALUS_AGENCY_NAME=Fire Department
+      - SALUS_AGENCY_TYPE=fire_department
+      - SALUS_GRPC__HOST=0.0.0.0
+      - SALUS_GRPC__PORT=50051
+      - SALUS_API__HOST=0.0.0.0
+      - SALUS_API__PORT=8000
+      - SALUS_RAFT__ELECTION_TIMEOUT_MIN_MS=300
+      - SALUS_RAFT__ELECTION_TIMEOUT_MAX_MS=600
+      - SALUS_RAFT__HEARTBEAT_INTERVAL_MS=50
+      - 'SALUS_PEERS=[{"node_id": "bravo", "grpc_address": "icp-bravo:50052"}, {"node_id": "charlie", "grpc_address": "icp-charlie:50053"}]'
+      - SALUS_WAL_DIR=/app/data/wal
+    ports:
+      - "8001:8000"
+      - "50051:50051"
+    volumes:
+      - alpha-wal:/app/data/wal
+    networks:
+      - salus-net
+    restart: unless-stopped
+
+  icp-bravo:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: salus-icp-bravo
+    hostname: icp-bravo
+    environment:
+      - SALUS_NODE_ID=bravo
+      - SALUS_ICP_NAME=ICP Bravo (Emergency Medical Services)
+      - SALUS_ICP_CODE=ICP-B
+      - SALUS_AGENCY_NAME=Emergency Medical Services
+      - SALUS_AGENCY_TYPE=medical_ems
+      - SALUS_GRPC__HOST=0.0.0.0
+      - SALUS_GRPC__PORT=50052
+      - SALUS_API__HOST=0.0.0.0
+      - SALUS_API__PORT=8000
+      - SALUS_RAFT__ELECTION_TIMEOUT_MIN_MS=300
+      - SALUS_RAFT__ELECTION_TIMEOUT_MAX_MS=600
+      - SALUS_RAFT__HEARTBEAT_INTERVAL_MS=50
+      - 'SALUS_PEERS=[{"node_id": "alpha", "grpc_address": "icp-alpha:50051"}, {"node_id": "charlie", "grpc_address": "icp-charlie:50053"}]'
+      - SALUS_WAL_DIR=/app/data/wal
+    ports:
+      - "8002:8000"
+      - "50052:50052"
+    volumes:
+      - bravo-wal:/app/data/wal
+    networks:
+      - salus-net
+    restart: unless-stopped
+
+  icp-charlie:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: salus-icp-charlie
+    hostname: icp-charlie
+    environment:
+      - SALUS_NODE_ID=charlie
+      - SALUS_ICP_NAME=ICP Charlie (Urban Search & Rescue)
+      - SALUS_ICP_CODE=ICP-C
+      - SALUS_AGENCY_NAME=Urban Search & Rescue
+      - SALUS_AGENCY_TYPE=sar_urban
+      - SALUS_GRPC__HOST=0.0.0.0
+      - SALUS_GRPC__PORT=50053
+      - SALUS_API__HOST=0.0.0.0
+      - SALUS_API__PORT=8000
+      - SALUS_RAFT__ELECTION_TIMEOUT_MIN_MS=300
+      - SALUS_RAFT__ELECTION_TIMEOUT_MAX_MS=600
+      - SALUS_RAFT__HEARTBEAT_INTERVAL_MS=50
+      - 'SALUS_PEERS=[{"node_id": "alpha", "grpc_address": "icp-alpha:50051"}, {"node_id": "bravo", "grpc_address": "icp-bravo:50052"}]'
+      - SALUS_WAL_DIR=/app/data/wal
+    ports:
+      - "8003:8000"
+      - "50053:50053"
+    volumes:
+      - charlie-wal:/app/data/wal
+    networks:
+      - salus-net
+    restart: unless-stopped
+
+volumes:
+  alpha-wal:
+  bravo-wal:
+  charlie-wal:
+
+networks:
+  salus-net:
+    driver: bridge

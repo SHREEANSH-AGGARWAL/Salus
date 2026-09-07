@@ -33,8 +33,9 @@ def score_zone_priority(zone: DisasterZone) -> ZonePriority:
     Returns:
         ZonePriority (P1–P5).
     """
-    raw_score = compute_raw_score(zone.needs, zone.damage_level, zone.access_status,
-                                  zone.time_since_last_contact_minutes)
+    raw_score = compute_raw_score(
+        zone.needs, zone.damage_level, zone.access_status, zone.time_since_last_contact_minutes
+    )
     return raw_score_to_priority(raw_score)
 
 
@@ -70,12 +71,7 @@ def compute_raw_score(
     time_score = _score_time_gap(time_since_last_contact_minutes)
 
     # Weighted combination
-    raw = (
-        0.40 * casualty_score
-        + 0.25 * damage_score
-        + 0.15 * access_score
-        + 0.20 * time_score
-    )
+    raw = 0.40 * casualty_score + 0.25 * damage_score + 0.15 * access_score + 0.20 * time_score
 
     return min(1.0, max(0.0, raw))
 
@@ -167,7 +163,7 @@ def _score_time_gap(minutes_since_contact: int) -> float:
         return 1.0
     if minutes_since_contact >= 180:  # 3+ hours
         return 0.8
-    if minutes_since_contact >= 60:   # 1+ hour
+    if minutes_since_contact >= 60:  # 1+ hour
         return 0.6
     if minutes_since_contact >= 30:
         return 0.4

@@ -20,26 +20,26 @@ class AgencyType(StrEnum):
     """Types of disaster response agencies."""
 
     FIRE_DEPARTMENT = "fire_department"
-    EMS = "ems"                          # Emergency Medical Services
+    EMS = "ems"  # Emergency Medical Services
     POLICE = "police"
     MILITARY = "military"
-    NDRF = "ndrf"                        # National Disaster Response Force
-    SDRF = "sdrf"                        # State Disaster Response Force
+    NDRF = "ndrf"  # National Disaster Response Force
+    SDRF = "sdrf"  # State Disaster Response Force
     COAST_GUARD = "coast_guard"
     RED_CROSS = "red_cross"
     NGO = "ngo"
-    GOVERNMENT = "government"            # Municipal/state emergency management
-    UTILITY = "utility"                  # Power, water, telecom companies
+    GOVERNMENT = "government"  # Municipal/state emergency management
+    UTILITY = "utility"  # Power, water, telecom companies
 
 
 class ICPStatus(StrEnum):
     """Incident Command Post operational status."""
 
-    OPERATIONAL = "operational"          # Fully operational, connected to cluster
-    DEGRADED = "degraded"               # Operating but with connectivity issues
-    PARTITIONED = "partitioned"         # Network partitioned from majority — read-only mode
-    OFFLINE = "offline"                  # ICP is offline/unreachable
-    DEPLOYING = "deploying"              # ICP being set up, not yet operational
+    OPERATIONAL = "operational"  # Fully operational, connected to cluster
+    DEGRADED = "degraded"  # Operating but with connectivity issues
+    PARTITIONED = "partitioned"  # Network partitioned from majority — read-only mode
+    OFFLINE = "offline"  # ICP is offline/unreachable
+    DEPLOYING = "deploying"  # ICP being set up, not yet operational
 
 
 class Agency(BaseModel):
@@ -91,15 +91,19 @@ class Agency(BaseModel):
         None, description="Last successful Raft heartbeat from this ICP"
     )
 
-    model_config = {"json_schema_extra": {"examples": [
-        {
-            "name": "NDRF 1st Battalion",
-            "code": "NDRF-1",
-            "agency_type": "ndrf",
-            "incident_commander": "Cmdr. Vikram Singh",
-            "commander_contact": "SAT-CH-7",
-            "icp_location": {"latitude": 28.5500, "longitude": 77.2000},
-            "icp_status": "operational",
-            "connectivity_type": "satellite",
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "name": "NDRF 1st Battalion",
+                    "code": "NDRF-1",
+                    "agency_type": "ndrf",
+                    "incident_commander": "Cmdr. Vikram Singh",
+                    "commander_contact": "SAT-CH-7",
+                    "icp_location": {"latitude": 28.5500, "longitude": 77.2000},
+                    "icp_status": "operational",
+                    "connectivity_type": "satellite",
+                }
+            ]
         }
-    ]}}
+    }

@@ -26,11 +26,13 @@ SAFETY INVARIANTS (these must never be violated):
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import random
 import time
+from collections.abc import Callable
 from enum import StrEnum
-from typing import Any, Callable
+from typing import Any
 
 import structlog
 
@@ -74,6 +76,7 @@ class RaftNode:
         election_timeout_max_ms: int = 300,
         heartbeat_interval_ms: int = 50,
         send_rpc: Callable | None = None,
+        wal: Any | None = None,
     ) -> None:
         """Initialize a Raft node.
 
@@ -86,22 +89,41 @@ class RaftNode:
             heartbeat_interval_ms: Leader heartbeat interval in ms.
             send_rpc: Callback for sending RPCs to peers. Signature:
                       async def send_rpc(target_id, rpc_type, request) -> response
+            wal: Optional persistent WALManager instance.
         """
         self.node_id = node_id
         self.peer_ids = list(peer_ids)
         self.state_machine = state_machine
+        self.wal = wal
 
-        # Persistent state (survives restarts — §5.2)
-        self.current_term: int = 0
-        self.voted_for: str | None = None
-        self.log = RaftLog()
+        # Recover from WAL if available
+        if wal is not None:
+            term, voted_for, entries, snapshot = wal.recover()
+            self.current_term = term
+            self.voted_for = voted_for
+            if snapshot is not None:
+                last_idx, last_term, sdata = snapshot
+                self.state_machine.restore(sdata)
+                self.log = RaftLog(
+                    wal=wal,
+                    entries=entries,
+                    last_included_index=last_idx,
+                    last_included_term=last_term,
+                )
+            else:
+                self.log = RaftLog(wal=wal, entries=entries)
+        else:
+            self.current_term = 0
+            self.voted_for = None
+            self.log = RaftLog()
 
         # Volatile state (all nodes)
         self.state = NodeState.FOLLOWER
         self.leader_id: str | None = None
+        self.local_pending_dispatches: list[dict] = []
 
         # Volatile state (leader only — reinitialized after election)
-        self.next_index: dict[str, int] = {}   # For each peer: next entry to send
+        self.next_index: dict[str, int] = {}  # For each peer: next entry to send
         self.match_index: dict[str, int] = {}  # For each peer: highest replicated entry
 
         # Timing
@@ -190,7 +212,15 @@ class RaftNode:
             - Granting a vote to a candidate
             - Starting a new election
         """
-        if self._election_task and not self._election_task.done():
+        current_task = None
+        with contextlib.suppress(RuntimeError):
+            current_task = asyncio.current_task()
+
+        if (
+            self._election_task
+            and self._election_task != current_task
+            and not self._election_task.done()
+        ):
             self._election_task.cancel()
 
         if self._running and self.state != NodeState.LEADER:
@@ -222,6 +252,8 @@ class RaftNode:
         self.voted_for = self.node_id
         self.leader_id = None
         self._votes_received = {self.node_id}  # Vote for self
+        if self.wal is not None:
+            self.wal.save_meta(self.current_term, self.voted_for)
 
         logger.info(
             "election_started",
@@ -230,6 +262,11 @@ class RaftNode:
             cluster_size=self.cluster_size,
             quorum_needed=self.quorum_size,
         )
+
+        # Single-node cluster (or quorum achieved with self-vote)
+        if len(self._votes_received) >= self.quorum_size:
+            await self._become_leader()
+            return
 
         # Send RequestVote to all peers in parallel
         request = {
@@ -273,9 +310,7 @@ class RaftNode:
             )
             self._reset_election_timer()
 
-    async def _send_request_vote(
-        self, peer_id: str, request: dict
-    ) -> dict | None:
+    async def _send_request_vote(self, peer_id: str, request: dict) -> dict | None:
         """Send a RequestVote RPC to a peer."""
         if self._send_rpc is None:
             return None
@@ -331,9 +366,18 @@ class RaftNode:
             votes=len(self._votes_received),
         )
 
-        # Cancel election timer
-        if self._election_task and not self._election_task.done():
+        # Cancel election timer if running externally, but don't cancel self
+        current_task = None
+        with contextlib.suppress(RuntimeError):
+            current_task = asyncio.current_task()
+
+        if (
+            self._election_task
+            and self._election_task != current_task
+            and not self._election_task.done()
+        ):
             self._election_task.cancel()
+        self._election_task = None
 
         # Send initial heartbeat (empty AppendEntries) to assert authority
         await self._send_heartbeats()
@@ -362,6 +406,8 @@ class RaftNode:
         self.current_term = new_term
         self.state = NodeState.FOLLOWER
         self.voted_for = None
+        if self.wal is not None:
+            self.wal.save_meta(self.current_term, self.voted_for)
 
         if old_state != NodeState.FOLLOWER:
             logger.info(
@@ -408,19 +454,22 @@ class RaftNode:
 
         vote_granted = False
 
-        if candidate_term >= self.current_term:
-            if self.voted_for is None or self.voted_for == candidate_id:
-                # Check log is up-to-date (§5.4.1)
-                if self.log.is_up_to_date(last_log_index, last_log_term):
-                    vote_granted = True
-                    self.voted_for = candidate_id
-                    self._reset_election_timer()  # Reset timer on vote grant
+        if (
+            candidate_term >= self.current_term
+            and (self.voted_for is None or self.voted_for == candidate_id)
+            and self.log.is_up_to_date(last_log_index, last_log_term)
+        ):
+            vote_granted = True
+            self.voted_for = candidate_id
+            if self.wal is not None:
+                self.wal.save_meta(self.current_term, self.voted_for)
+            self._reset_election_timer()  # Reset timer on vote grant
 
-                    logger.info(
-                        "vote_granted",
-                        to_candidate=candidate_id,
-                        term=self.current_term,
-                    )
+            logger.info(
+                "vote_granted",
+                to_candidate=candidate_id,
+                term=self.current_term,
+            )
 
         return {
             "term": self.current_term,
@@ -441,25 +490,33 @@ class RaftNode:
         except asyncio.CancelledError:
             pass
 
-    async def _send_heartbeats(self) -> None:
-        """Send AppendEntries RPCs to all peers (heartbeat or replication)."""
+    async def _send_heartbeats(self) -> int:
+        """Send AppendEntries RPCs to all peers (heartbeat or replication).
+
+        Returns:
+            Number of peers acknowledging successfully (including self).
+        """
         if not self.is_leader:
-            return
+            return 1
 
         tasks = []
         for peer_id in self.peer_ids:
             tasks.append(self._send_append_entries(peer_id))
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
+        ack_count = 1  # Self always acks
         for peer_id, result in zip(self.peer_ids, results):
-            if isinstance(result, Exception):
+            if isinstance(result, dict) and result.get("success"):
+                ack_count += 1
+            elif isinstance(result, Exception):
                 logger.debug("heartbeat_failed", peer=peer_id, error=str(result))
+        return ack_count
 
     async def _send_append_entries(self, peer_id: str) -> dict | None:
         """Send an AppendEntries RPC to a specific peer.
 
         Sends entries from next_index[peer_id] onward. If the peer
-        rejects (consistency check fails), decrement next_index and retry.
+        is too far behind, sends an InstallSnapshot RPC instead.
 
         Args:
             peer_id: Target peer.
@@ -471,6 +528,29 @@ class RaftNode:
             return None
 
         next_idx = self.next_index.get(peer_id, self.log.last_index + 1)
+
+        # Check if follower needs snapshot (§7)
+        if next_idx <= self.log.last_included_index and self.log.last_included_index > 0:
+            snapshot = self.wal.get_snapshot() if self.wal else None
+            if snapshot:
+                s_idx, s_term, s_data = snapshot
+                request = {
+                    "term": self.current_term,
+                    "leader_id": self.node_id,
+                    "last_included_index": s_idx,
+                    "last_included_term": s_term,
+                    "data": s_data,
+                }
+                try:
+                    response = await self._send_rpc(peer_id, "install_snapshot", request)
+                    if response and response.get("success"):
+                        self.next_index[peer_id] = s_idx + 1
+                        self.match_index[peer_id] = s_idx
+                    return response
+                except Exception as e:
+                    logger.debug("install_snapshot_failed", peer=peer_id, error=str(e))
+                    return None
+
         prev_log_index = next_idx - 1
         prev_log_term = self.log.get_term(prev_log_index)
 
@@ -686,9 +766,7 @@ class RaftNode:
     # Client Interface — Submitting Commands
     # ========================================================================
 
-    async def submit_command(
-        self, command_type: CommandType, payload: dict
-    ) -> dict:
+    async def submit_command(self, command_type: CommandType, payload: dict) -> dict:
         """Submit a command to the Raft cluster.
 
         Only the leader can accept commands. Followers should redirect
@@ -706,8 +784,7 @@ class RaftNode:
         """
         if not self.is_leader:
             raise RuntimeError(
-                f"Not the leader. Current leader: {self.leader_id}. "
-                f"Redirect command to the leader."
+                f"Not the leader. Current leader: {self.leader_id}. Redirect command to the leader."
             )
 
         # Append to local log
@@ -761,7 +838,7 @@ class RaftNode:
         }
 
     async def read_with_index(self) -> int:
-        """Get the current commit index for a linearizable read.
+        """Get the current commit index for a linearizable read (§6.4).
 
         If this node is the leader, it must first confirm it's still
         the leader by checking that a quorum of peers acknowledge
@@ -775,15 +852,83 @@ class RaftNode:
         """
         if not self.is_leader:
             raise RuntimeError(
-                f"Not the leader. Read-index requires contacting "
-                f"the leader ({self.leader_id})."
+                f"Not the leader. Read-index requires contacting the leader ({self.leader_id})."
             )
 
-        # Send heartbeats and confirm quorum responds
-        # (In a full implementation, this would track heartbeat acks)
-        await self._send_heartbeats()
+        # Send heartbeats and confirm quorum responds (§6.4)
+        ack_count = await self._send_heartbeats()
+        if ack_count < self.quorum_size:
+            raise RuntimeError(
+                f"Quorum lost (acknowledged by {ack_count}/{self.quorum_size} nodes). "
+                f"Cannot serve linearizable read."
+            )
+
+        read_index = self.log.commit_index
+        while self.log.last_applied < read_index:
+            await asyncio.sleep(0.005)
 
         return self.log.commit_index
+
+    # ========================================================================
+    # §7 — Log Compaction & Snapshotting
+    # ========================================================================
+
+    def save_snapshot(self) -> None:
+        """Compact log by saving a state machine snapshot (§7)."""
+        data = self.state_machine.snapshot()
+        last_index = self.log.commit_index
+        last_term = self.log.get_term(last_index)
+        self.log.compact_to(last_index, last_term, data)
+        logger.info(
+            "snapshot_saved",
+            node_id=self.node_id,
+            last_index=last_index,
+            last_term=last_term,
+            bytes=len(data),
+        )
+
+    def handle_install_snapshot(self, request: dict) -> dict:
+        """Handle incoming InstallSnapshot RPC (§7)."""
+        term = request["term"]
+        leader_id = request["leader_id"]
+        last_included_index = request["last_included_index"]
+        last_included_term = request["last_included_term"]
+        data = request["data"]
+        if isinstance(data, str):
+            data = data.encode("utf-8")
+
+        if term < self.current_term:
+            return {
+                "term": self.current_term,
+                "success": False,
+                "follower_id": self.node_id,
+            }
+
+        if term > self.current_term:
+            self._step_down(term)
+
+        self.leader_id = leader_id
+        self._last_heartbeat = time.monotonic()
+        self._reset_election_timer()
+
+        # Restore state machine from snapshot
+        self.state_machine.restore(data)
+        self.log.compact_to(last_included_index, last_included_term, data)
+        self.log.commit_index = max(self.log.commit_index, last_included_index)
+        self.log.last_applied = max(self.log.last_applied, last_included_index)
+
+        return {
+            "term": self.current_term,
+            "success": True,
+            "follower_id": self.node_id,
+        }
+
+    @property
+    def is_partitioned(self) -> bool:
+        """True if follower has lost contact with leader past timeout threshold."""
+        if self.state == NodeState.LEADER:
+            return False
+        return (time.monotonic() - self._last_heartbeat) > (self._election_timeout_max * 2.5)
 
     # ========================================================================
     # Status / Debug
@@ -801,6 +946,7 @@ class RaftNode:
             "commit_index": self.log.commit_index,
             "last_applied": self.log.last_applied,
             "last_log_term": self.log.last_term,
+            "is_partitioned": self.is_partitioned,
             "peers": self.peer_ids,
             "cluster_size": self.cluster_size,
             "quorum_size": self.quorum_size,

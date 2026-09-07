@@ -23,11 +23,11 @@ class ResourceType(StrEnum):
     HELICOPTER_TRANSPORT = "helicopter_transport"
     HELICOPTER_MEDICAL = "helicopter_medical"
     HELICOPTER_HEAVY_LIFT = "helicopter_heavy_lift"
-    SAR_TEAM_URBAN = "sar_team_urban"           # Urban search and rescue
-    SAR_TEAM_WATER = "sar_team_water"            # Water/flood rescue
-    SAR_TEAM_MOUNTAIN = "sar_team_mountain"      # Mountain/wilderness rescue
+    SAR_TEAM_URBAN = "sar_team_urban"  # Urban search and rescue
+    SAR_TEAM_WATER = "sar_team_water"  # Water/flood rescue
+    SAR_TEAM_MOUNTAIN = "sar_team_mountain"  # Mountain/wilderness rescue
     AMBULANCE = "ambulance"
-    AMBULANCE_ALS = "ambulance_als"              # Advanced Life Support
+    AMBULANCE_ALS = "ambulance_als"  # Advanced Life Support
     FIRE_ENGINE = "fire_engine"
     HAZMAT_TEAM = "hazmat_team"
     EVACUATION_BUS = "evacuation_bus"
@@ -37,7 +37,7 @@ class ResourceType(StrEnum):
     FIELD_HOSPITAL = "field_hospital"
     K9_UNIT = "k9_unit"
     DRONE_TEAM = "drone_team"
-    ENGINEERING_UNIT = "engineering_unit"         # Heavy equipment, road clearing
+    ENGINEERING_UNIT = "engineering_unit"  # Heavy equipment, road clearing
 
 
 class ResourceStatus(StrEnum):
@@ -69,15 +69,18 @@ class ConfirmationSource(StrEnum):
     No autonomous dispatch — always commander-confirmed.
     """
 
-    COMMANDER = "commander"          # Incident Commander confirmed
-    AUTONOMOUS = "autonomous"        # System auto-confirmed (TESTING/DEMO ONLY)
-    OVERRIDE = "override"            # Commander overrode AI recommendation
+    COMMANDER = "commander"  # Incident Commander confirmed
+    AUTONOMOUS = "autonomous"  # System auto-confirmed (TESTING/DEMO ONLY)
+    OVERRIDE = "override"  # Commander overrode AI recommendation
 
 
 # Valid state transitions — the dispatch state machine
 VALID_TRANSITIONS: dict[ResourceStatus, set[ResourceStatus]] = {
     ResourceStatus.AVAILABLE: {ResourceStatus.DISPATCHED, ResourceStatus.MAINTENANCE},
-    ResourceStatus.DISPATCHED: {ResourceStatus.ON_SCENE, ResourceStatus.AVAILABLE},  # AVAILABLE = cancellation
+    ResourceStatus.DISPATCHED: {
+        ResourceStatus.ON_SCENE,
+        ResourceStatus.AVAILABLE,
+    },  # AVAILABLE = cancellation
     ResourceStatus.ON_SCENE: {ResourceStatus.RETURNING, ResourceStatus.NEEDS_RESUPPLY},
     ResourceStatus.RETURNING: {ResourceStatus.AVAILABLE},
     ResourceStatus.NEEDS_RESUPPLY: {ResourceStatus.RESUPPLYING, ResourceStatus.RETURNING},
@@ -144,7 +147,9 @@ class Resource(BaseModel):
 
     # Identity
     name: str = Field(..., min_length=1, description="Human-readable name (e.g., 'SAR Team Alpha')")
-    callsign: str = Field(..., min_length=1, max_length=20, description="Radio callsign (e.g., 'ALPHA-7')")
+    callsign: str = Field(
+        ..., min_length=1, max_length=20, description="Radio callsign (e.g., 'ALPHA-7')"
+    )
     resource_type: ResourceType = Field(..., description="Resource classification")
     owning_agency_id: str = Field(..., description="Agency that owns this resource")
 
@@ -156,7 +161,9 @@ class Resource(BaseModel):
 
     # Location
     home_base: GeoLocation = Field(..., description="Base/staging area location")
-    current_location: GeoLocation | None = Field(None, description="Current GPS position (if tracking)")
+    current_location: GeoLocation | None = Field(
+        None, description="Current GPS position (if tracking)"
+    )
 
     # State — replicated via Raft
     status: ResourceStatus = Field(ResourceStatus.AVAILABLE, description="Current deployment state")
@@ -167,7 +174,9 @@ class Resource(BaseModel):
 
     # Current assignment (populated when DISPATCHED or ON_SCENE)
     assigned_zone_id: str | None = Field(None, description="Zone this resource is assigned to")
-    assigned_incident_id: str | None = Field(None, description="Incident this resource is responding to")
+    assigned_incident_id: str | None = Field(
+        None, description="Incident this resource is responding to"
+    )
     dispatched_by: str | None = Field(None, description="Commander ID who confirmed dispatch")
     dispatch_expires_at: datetime | None = Field(
         None, description="Dispatch timeout — auto-cancel if not on scene"
@@ -175,7 +184,9 @@ class Resource(BaseModel):
 
     # Operational
     hours_deployed: float = Field(0.0, ge=0, description="Hours deployed in current shift")
-    max_shift_hours: float = Field(12.0, ge=1, description="Maximum shift duration before mandatory rest")
+    max_shift_hours: float = Field(
+        12.0, ge=1, description="Maximum shift duration before mandatory rest"
+    )
 
     # Raft metadata
     raft_log_index: int | None = Field(
@@ -192,26 +203,30 @@ class Resource(BaseModel):
         """True if resource has exceeded max shift hours."""
         return self.hours_deployed >= self.max_shift_hours
 
-    model_config = {"json_schema_extra": {"examples": [
-        {
-            "name": "SAR Team Alpha",
-            "callsign": "ALPHA-7",
-            "resource_type": "sar_team_urban",
-            "owning_agency_id": "agency-ndrf",
-            "capabilities": {
-                "personnel_count": 12,
-                "has_medical_personnel": True,
-                "can_perform_sar": True,
-                "has_listening_devices": True,
-                "has_thermal_imaging": True,
-                "can_access_rough_terrain": True,
-                "max_range_km": 200,
-                "fuel_hours_remaining": 8.0,
-            },
-            "home_base": {"latitude": 28.5672, "longitude": 77.2100},
-            "status": "available",
+    model_config = {
+        "json_schema_extra": {
+            "examples": [
+                {
+                    "name": "SAR Team Alpha",
+                    "callsign": "ALPHA-7",
+                    "resource_type": "sar_team_urban",
+                    "owning_agency_id": "agency-ndrf",
+                    "capabilities": {
+                        "personnel_count": 12,
+                        "has_medical_personnel": True,
+                        "can_perform_sar": True,
+                        "has_listening_devices": True,
+                        "has_thermal_imaging": True,
+                        "can_access_rough_terrain": True,
+                        "max_range_km": 200,
+                        "fuel_hours_remaining": 8.0,
+                    },
+                    "home_base": {"latitude": 28.5672, "longitude": 77.2100},
+                    "status": "available",
+                }
+            ]
         }
-    ]}}
+    }
 
 
 class ResourceStateTransition(BaseModel):

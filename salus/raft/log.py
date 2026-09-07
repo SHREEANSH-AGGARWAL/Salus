@@ -17,9 +17,8 @@ Reference: Ongaro & Ousterhout (2014), §5.3–§5.4
 
 from __future__ import annotations
 
-import json
 import threading
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 import structlog
@@ -41,14 +40,31 @@ class RaftLog:
         but it's here for correctness.
     """
 
-    def __init__(self) -> None:
-        # Sentinel entry at index 0 — simplifies boundary conditions
-        self._entries: list[LogEntry] = [
-            LogEntry(term=0, index=0, command_type=CommandType.NOOP, payload="{}")
-        ]
+    def __init__(
+        self,
+        wal: Any | None = None,
+        entries: list[LogEntry] | None = None,
+        last_included_index: int = 0,
+        last_included_term: int = 0,
+    ) -> None:
+        self.wal = wal
+        self.last_included_index = last_included_index
+        self.last_included_term = last_included_term
+
+        # Sentinel entry at index 0 (or last snapshot boundary)
+        sentinel = LogEntry(
+            term=last_included_term,
+            index=last_included_index,
+            command_type=CommandType.NOOP,
+            payload="{}",
+        )
+        self._entries: list[LogEntry] = [sentinel]
+        if entries:
+            self._entries.extend(entries)
+
         self._lock = threading.Lock()
-        self._commit_index: int = 0
-        self._last_applied: int = 0
+        self._commit_index: int = last_included_index
+        self._last_applied: int = last_included_index
 
     @property
     def commit_index(self) -> int:
@@ -58,9 +74,7 @@ class RaftLog:
     @commit_index.setter
     def commit_index(self, value: int) -> None:
         if value < self._commit_index:
-            raise ValueError(
-                f"Cannot decrease commit index: {self._commit_index} → {value}"
-            )
+            raise ValueError(f"Cannot decrease commit index: {self._commit_index} → {value}")
         self._commit_index = value
 
     @property
@@ -75,7 +89,7 @@ class RaftLog:
     @property
     def last_index(self) -> int:
         """Index of the last entry in the log."""
-        return len(self._entries) - 1
+        return self._entries[-1].index
 
     @property
     def last_term(self) -> int:
@@ -92,8 +106,9 @@ class RaftLog:
             The log entry, or None if index is out of range.
         """
         with self._lock:
-            if 0 <= index < len(self._entries):
-                return self._entries[index]
+            offset = index - self.last_included_index
+            if 0 <= offset < len(self._entries):
+                return self._entries[offset]
             return None
 
     def get_term(self, index: int) -> int:
@@ -119,9 +134,11 @@ class RaftLog:
             List of log entries.
         """
         with self._lock:
+            start_offset = max(0, start - self.last_included_index)
             if end is None:
-                return list(self._entries[start:])
-            return list(self._entries[start : end + 1])
+                return list(self._entries[start_offset:])
+            end_offset = max(0, end - self.last_included_index)
+            return list(self._entries[start_offset : end_offset + 1])
 
     def append(self, term: int, command_type: CommandType, payload: str) -> LogEntry:
         """Append a new entry to the log (leader only).
@@ -137,15 +154,17 @@ class RaftLog:
             The newly created log entry.
         """
         with self._lock:
-            index = len(self._entries)
+            index = self.last_index + 1
             entry = LogEntry(
                 term=term,
                 index=index,
                 command_type=command_type,
                 payload=payload,
-                timestamp=datetime.utcnow(),
+                timestamp=datetime.now(UTC),
             )
             self._entries.append(entry)
+            if self.wal is not None:
+                self.wal.append_entry(entry)
 
             logger.debug(
                 "log_entry_appended",
@@ -205,6 +224,7 @@ class RaftLog:
                     return False
 
             # Step 2 & 3: Conflict resolution and append
+            new_to_persist = []
             for entry in entries:
                 if entry.index < len(self._entries):
                     existing = self._entries[entry.index]
@@ -217,11 +237,18 @@ class RaftLog:
                             new_term=entry.term,
                         )
                         self._entries = self._entries[: entry.index]
+                        if self.wal is not None:
+                            self.wal.truncate_after(entry.index - 1)
                         self._entries.append(entry)
+                        new_to_persist.append(entry)
                     # else: entry already exists with same term — skip (idempotent)
                 else:
                     # New entry — append
                     self._entries.append(entry)
+                    new_to_persist.append(entry)
+
+            if self.wal is not None and new_to_persist:
+                self.wal.append_entries(new_to_persist)
 
             return True
 
@@ -238,11 +265,37 @@ class RaftLog:
             if index < len(self._entries) - 1:
                 deleted_count = len(self._entries) - index - 1
                 self._entries = self._entries[: index + 1]
+                if self.wal is not None:
+                    self.wal.truncate_after(index)
                 logger.info(
                     "log_truncated",
                     after_index=index,
                     entries_deleted=deleted_count,
                 )
+
+    def compact_to(
+        self, last_included_index: int, last_included_term: int, snapshot_data: bytes
+    ) -> None:
+        """Compact the log up to last_included_index by saving a snapshot.
+
+        Used for log compaction (§7). Discards entries prior to last_included_index.
+        """
+        with self._lock:
+            if self.wal is not None:
+                self.wal.save_snapshot(last_included_index, last_included_term, snapshot_data)
+
+            self.last_included_index = last_included_index
+            self.last_included_term = last_included_term
+
+            # Keep entries strictly after last_included_index
+            remaining = [e for e in self._entries if e.index > last_included_index]
+            sentinel = LogEntry(
+                term=last_included_term,
+                index=last_included_index,
+                command_type=CommandType.NOOP,
+                payload="{}",
+            )
+            self._entries = [sentinel, *remaining]
 
     def entries_after(self, index: int, max_count: int = 100) -> list[LogEntry]:
         """Get entries after a given index (for replication).
@@ -255,9 +308,11 @@ class RaftLog:
             List of log entries after the given index.
         """
         with self._lock:
-            start = index + 1
-            end = min(start + max_count, len(self._entries))
-            return list(self._entries[start:end])
+            start_offset = max(1, index - self.last_included_index + 1)
+            if start_offset >= len(self._entries):
+                return []
+            end_offset = min(start_offset + max_count, len(self._entries))
+            return list(self._entries[start_offset:end_offset])
 
     def is_up_to_date(self, last_log_index: int, last_log_term: int) -> bool:
         """Check if a candidate's log is at least as up-to-date as ours.
@@ -291,13 +346,14 @@ class RaftLog:
             (committed_entries, uncommitted_entries) — both exclude sentinel.
         """
         with self._lock:
-            committed = self._entries[1 : self._commit_index + 1]
-            uncommitted = self._entries[self._commit_index + 1 :]
+            commit_offset = max(0, self._commit_index - self.last_included_index)
+            committed = self._entries[1 : commit_offset + 1]
+            uncommitted = self._entries[commit_offset + 1 :]
             return committed, uncommitted
 
     def __len__(self) -> int:
-        """Return the number of real entries (excluding sentinel)."""
-        return len(self._entries) - 1
+        """Return the highest log index (excluding sentinel)."""
+        return self.last_index
 
     def __repr__(self) -> str:
         return (

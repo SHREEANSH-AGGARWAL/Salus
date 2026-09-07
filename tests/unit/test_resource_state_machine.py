@@ -12,11 +12,10 @@ import pytest
 
 from salus.models.resource import (
     ConfirmationSource,
-    ResourceStatus,
     ResourceStateTransition,
+    ResourceStatus,
     is_valid_transition,
 )
-
 
 # ============================================================================
 # Valid Transition Tests
@@ -42,7 +41,7 @@ class TestValidTransitions:
             (ResourceStatus.AVAILABLE, ResourceStatus.DISPATCHED),
             (ResourceStatus.AVAILABLE, ResourceStatus.MAINTENANCE),
             (ResourceStatus.DISPATCHED, ResourceStatus.ON_SCENE),
-            (ResourceStatus.DISPATCHED, ResourceStatus.AVAILABLE),     # Cancellation
+            (ResourceStatus.DISPATCHED, ResourceStatus.AVAILABLE),  # Cancellation
             (ResourceStatus.ON_SCENE, ResourceStatus.RETURNING),
             (ResourceStatus.ON_SCENE, ResourceStatus.NEEDS_RESUPPLY),
             (ResourceStatus.RETURNING, ResourceStatus.AVAILABLE),
@@ -53,7 +52,9 @@ class TestValidTransitions:
             (ResourceStatus.MAINTENANCE, ResourceStatus.AVAILABLE),
         ],
     )
-    def test_valid_transitions(self, from_status: ResourceStatus, to_status: ResourceStatus) -> None:
+    def test_valid_transitions(
+        self, from_status: ResourceStatus, to_status: ResourceStatus
+    ) -> None:
         assert is_valid_transition(from_status, to_status) is True
 
 
@@ -100,7 +101,9 @@ class TestInvalidTransitions:
             (ResourceStatus.ON_SCENE, ResourceStatus.ON_SCENE),
         ],
     )
-    def test_invalid_transitions(self, from_status: ResourceStatus, to_status: ResourceStatus) -> None:
+    def test_invalid_transitions(
+        self, from_status: ResourceStatus, to_status: ResourceStatus
+    ) -> None:
         assert is_valid_transition(from_status, to_status) is False
 
 
@@ -188,12 +191,16 @@ class TestResourceStateTransition:
 
     def test_transition_id_auto_generated(self) -> None:
         t1 = ResourceStateTransition(
-            resource_id="r1", from_status=ResourceStatus.AVAILABLE,
-            to_status=ResourceStatus.MAINTENANCE, actor_id="sys",
+            resource_id="r1",
+            from_status=ResourceStatus.AVAILABLE,
+            to_status=ResourceStatus.MAINTENANCE,
+            actor_id="sys",
         )
         t2 = ResourceStateTransition(
-            resource_id="r1", from_status=ResourceStatus.AVAILABLE,
-            to_status=ResourceStatus.MAINTENANCE, actor_id="sys",
+            resource_id="r1",
+            from_status=ResourceStatus.AVAILABLE,
+            to_status=ResourceStatus.MAINTENANCE,
+            actor_id="sys",
         )
         assert t1.id != t2.id
 

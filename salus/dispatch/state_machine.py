@@ -24,9 +24,8 @@ from salus.models.incident import Incident, IncidentStatus
 from salus.models.resource import (
     ConfirmationSource,
     Resource,
-    ResourceStatus,
     ResourceStateTransition,
-    is_valid_transition,
+    ResourceStatus,
 )
 from salus.models.zone import DisasterZone, ZonePriority
 from salus.raft.log_entry import CommandType, LogEntry
@@ -143,20 +142,16 @@ class DispatchStateMachine(StateMachine):
         """
         state = json.loads(data.decode("utf-8"))
         self.resources = {
-            rid: Resource.model_validate(rdata)
-            for rid, rdata in state["resources"].items()
+            rid: Resource.model_validate(rdata) for rid, rdata in state["resources"].items()
         }
         self.zones = {
-            zid: DisasterZone.model_validate(zdata)
-            for zid, zdata in state["zones"].items()
+            zid: DisasterZone.model_validate(zdata) for zid, zdata in state["zones"].items()
         }
         self.incidents = {
-            iid: Incident.model_validate(idata)
-            for iid, idata in state["incidents"].items()
+            iid: Incident.model_validate(idata) for iid, idata in state["incidents"].items()
         }
         self.dispatches = {
-            did: DispatchOrder.model_validate(ddata)
-            for did, ddata in state["dispatches"].items()
+            did: DispatchOrder.model_validate(ddata) for did, ddata in state["dispatches"].items()
         }
         self._last_applied = state["last_applied"]
 

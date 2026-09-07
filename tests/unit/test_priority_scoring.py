@@ -24,7 +24,6 @@ from salus.models.zone import (
     ZonePriority,
 )
 
-
 # ============================================================================
 # Raw Score to Priority Mapping Tests
 # ============================================================================
@@ -65,7 +64,8 @@ class TestScoreZonePriority:
     def test_critical_zone(self) -> None:
         """High casualties + catastrophic damage → P1."""
         zone = _make_zone(
-            trapped=50, injured=200,
+            trapped=50,
+            injured=200,
             damage=DamageLevel.CATASTROPHIC,
             access=AccessStatus.AIR_ONLY,
             time_since_contact=200,
@@ -75,7 +75,8 @@ class TestScoreZonePriority:
     def test_high_priority_zone(self) -> None:
         """Significant casualties + severe damage → P2 or P3 (boundary case)."""
         zone = _make_zone(
-            trapped=15, injured=60,
+            trapped=15,
+            injured=60,
             damage=DamageLevel.SEVERE,
             access=AccessStatus.RESTRICTED,
             time_since_contact=45,
@@ -86,7 +87,8 @@ class TestScoreZonePriority:
     def test_low_priority_zone(self) -> None:
         """No casualties + light damage → P4 or P5."""
         zone = _make_zone(
-            trapped=0, injured=0,
+            trapped=0,
+            injured=0,
             damage=DamageLevel.LIGHT,
             access=AccessStatus.OPEN,
             time_since_contact=5,
@@ -97,7 +99,8 @@ class TestScoreZonePriority:
     def test_minimal_damage_zone(self) -> None:
         """No damage, no casualties → P5."""
         zone = _make_zone(
-            trapped=0, injured=0,
+            trapped=0,
+            injured=0,
             damage=DamageLevel.NONE,
             access=AccessStatus.OPEN,
             time_since_contact=0,
@@ -107,7 +110,8 @@ class TestScoreZonePriority:
     def test_unknown_damage_moderate_treatment(self) -> None:
         """Unknown damage treated as moderate (precautionary)."""
         zone = _make_zone(
-            trapped=5, injured=10,
+            trapped=5,
+            injured=10,
             damage=DamageLevel.UNKNOWN,
             access=AccessStatus.UNKNOWN,
             time_since_contact=30,
@@ -119,20 +123,30 @@ class TestScoreZonePriority:
     def test_long_contact_gap_increases_priority(self) -> None:
         """6+ hours without contact → significantly higher priority."""
         zone_recent = _make_zone(
-            trapped=5, injured=10, damage=DamageLevel.MODERATE,
-            access=AccessStatus.RESTRICTED, time_since_contact=5,
+            trapped=5,
+            injured=10,
+            damage=DamageLevel.MODERATE,
+            access=AccessStatus.RESTRICTED,
+            time_since_contact=5,
         )
         zone_stale = _make_zone(
-            trapped=5, injured=10, damage=DamageLevel.MODERATE,
-            access=AccessStatus.RESTRICTED, time_since_contact=400,
+            trapped=5,
+            injured=10,
+            damage=DamageLevel.MODERATE,
+            access=AccessStatus.RESTRICTED,
+            time_since_contact=400,
         )
         score_recent = compute_raw_score(
-            zone_recent.needs, zone_recent.damage_level,
-            zone_recent.access_status, zone_recent.time_since_last_contact_minutes,
+            zone_recent.needs,
+            zone_recent.damage_level,
+            zone_recent.access_status,
+            zone_recent.time_since_last_contact_minutes,
         )
         score_stale = compute_raw_score(
-            zone_stale.needs, zone_stale.damage_level,
-            zone_stale.access_status, zone_stale.time_since_last_contact_minutes,
+            zone_stale.needs,
+            zone_stale.damage_level,
+            zone_stale.access_status,
+            zone_stale.time_since_last_contact_minutes,
         )
         assert score_stale > score_recent
 
@@ -147,7 +161,8 @@ class TestDeterminism:
 
     def test_repeated_scoring_identical(self) -> None:
         zone = _make_zone(
-            trapped=30, injured=100,
+            trapped=30,
+            injured=100,
             damage=DamageLevel.CATASTROPHIC,
             access=AccessStatus.RESTRICTED,
             time_since_contact=120,
@@ -175,15 +190,13 @@ class TestCasualtyScoring:
     @pytest.mark.parametrize(
         "trapped, injured, min_expected_score",
         [
-            (50, 200, 0.7),   # Mass casualties → near max
-            (20, 100, 0.5),   # Significant
-            (5, 20, 0.2),     # Moderate
-            (0, 0, 0.0),      # None
+            (50, 200, 0.7),  # Mass casualties → near max
+            (20, 100, 0.5),  # Significant
+            (5, 20, 0.2),  # Moderate
+            (0, 0, 0.0),  # None
         ],
     )
-    def test_casualty_scaling(
-        self, trapped: int, injured: int, min_expected_score: float
-    ) -> None:
+    def test_casualty_scaling(self, trapped: int, injured: int, min_expected_score: float) -> None:
         needs = ZoneNeeds(estimated_trapped=trapped, estimated_injured=injured)
         score = compute_raw_score(needs, DamageLevel.NONE, AccessStatus.OPEN, 0)
         assert score >= min_expected_score * 0.4  # 40% weight

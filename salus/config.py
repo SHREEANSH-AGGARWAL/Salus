@@ -20,9 +20,7 @@ class RaftConfig(BaseSettings):
     """
 
     # Election
-    election_timeout_min_ms: int = Field(
-        150, ge=50, description="Minimum election timeout (ms)"
-    )
+    election_timeout_min_ms: int = Field(150, ge=50, description="Minimum election timeout (ms)")
     election_timeout_max_ms: int = Field(
         300, ge=100, description="Maximum election timeout (ms) — randomized per node"
     )
@@ -66,9 +64,7 @@ class APIConfig(BaseSettings):
     host: str = Field("0.0.0.0", description="API server bind address")
     port: int = Field(8000, ge=1024, le=65535, description="API server port")
     workers: int = Field(1, ge=1, description="Uvicorn worker count")
-    cors_origins: list[str] = Field(
-        ["*"], description="Allowed CORS origins"
-    )
+    cors_origins: list[str] = Field(["*"], description="Allowed CORS origins")
 
     model_config = SettingsConfigDict(env_prefix="SALUS_API_")
 
@@ -76,12 +72,8 @@ class APIConfig(BaseSettings):
 class RAGConfig(BaseSettings):
     """RAG knowledge layer settings."""
 
-    embedding_model: str = Field(
-        "all-MiniLM-L6-v2", description="Sentence-transformer model name"
-    )
-    chroma_persist_dir: str = Field(
-        "./data/chroma", description="ChromaDB persistence directory"
-    )
+    embedding_model: str = Field("all-MiniLM-L6-v2", description="Sentence-transformer model name")
+    chroma_persist_dir: str = Field("./data/chroma", description="ChromaDB persistence directory")
     chunk_size: int = Field(1000, ge=100, description="Document chunk size (characters)")
     chunk_overlap: int = Field(200, ge=0, description="Chunk overlap (characters)")
     top_k: int = Field(5, ge=1, le=20, description="Number of chunks to retrieve")
@@ -94,12 +86,12 @@ class LLMConfig(BaseSettings):
 
     provider: str = Field("openai", description="LLM provider: 'openai' or 'ollama'")
     model: str = Field("gpt-4o", description="Model name")
-    ollama_base_url: str = Field(
-        "http://localhost:11434", description="Ollama API base URL"
-    )
+    ollama_base_url: str = Field("http://localhost:11434", description="Ollama API base URL")
     timeout_seconds: float = Field(
-        5.0, ge=1.0, le=30.0,
-        description="LLM timeout — triggers circuit-breaker fallback to rule-based dispatch"
+        5.0,
+        ge=1.0,
+        le=30.0,
+        description="LLM timeout — triggers circuit-breaker fallback to rule-based dispatch",
     )
     temperature: float = Field(0.1, ge=0.0, le=2.0, description="LLM temperature")
     max_retries: int = Field(1, ge=0, le=3, description="LLM call retries before fallback")
