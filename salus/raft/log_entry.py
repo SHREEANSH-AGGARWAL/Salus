@@ -1,16 +1,14 @@
 """
 Raft log entry — the atomic unit of the replicated log.
 
-This is an INTERFACE CONTRACT (C1) — S1 and S2 must agree on this
-schema before writing any Raft implementation code. All Raft modules
-depend on this definition.
+All Raft modules depend on this definition.
 
 Reference: Ongaro & Ousterhout (2014), §5.3
 """
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -77,7 +75,7 @@ class LogEntry(BaseModel):
     index: int = Field(..., ge=0, description="Log position (0=sentinel, 1+ = real entries)")
     command_type: CommandType = Field(..., description="State machine command type")
     payload: str = Field(..., description="JSON-serialized command payload")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Populated after commit
     committed: bool = Field(False, description="True after quorum acknowledgment")

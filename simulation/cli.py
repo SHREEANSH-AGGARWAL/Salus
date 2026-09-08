@@ -11,7 +11,6 @@ from __future__ import annotations
 
 import argparse
 import sys
-import time
 
 import httpx
 from rich.console import Console

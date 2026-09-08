@@ -4,7 +4,7 @@
 import grpc
 
 try:
-    from salus.grpc import raft_pb2 as raft__pb2
+    from salus.transport import raft_pb2 as raft__pb2
 except ImportError:
     import raft_pb2 as raft__pb2
 

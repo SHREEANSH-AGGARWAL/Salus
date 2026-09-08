@@ -15,9 +15,9 @@ Usage:
 from __future__ import annotations
 
 import random
-import uuid
 
 from salus.models.agency import Agency, AgencyType, ICPStatus
+from salus.models.common import GeoLocation
 from salus.models.incident import Incident, IncidentSeverity, IncidentStatus, IncidentType
 from salus.models.resource import (
     Resource,
@@ -31,10 +31,7 @@ from salus.models.zone import (
     DisasterZone,
     ZoneBoundary,
     ZoneNeeds,
-    ZonePriority,
 )
-from salus.models.common import GeoLocation
-
 
 # ============================================================================
 # Zone Names and Descriptions
@@ -406,7 +403,7 @@ def generate_resources(
     resources = []
     counters: dict[str, int] = {}
 
-    for i in range(n):
+    for _i in range(n):
         rtype = rng.choice(pool)
         template = _RESOURCE_TEMPLATES.get(rtype, {})
 

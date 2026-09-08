@@ -1,8 +1,6 @@
 // Salus — Raft RPC Protocol Buffer Definitions
 //
-// INTERFACE CONTRACT (C1): This file defines all inter-ICP RPCs.
-// S1 (leader election) and S2 (log replication) both depend on these schemas.
-// Modify with caution — changes require both seniors to review.
+// This file defines all inter-ICP RPCs.
 //
 // Reference: Ongaro & Ousterhout (2014), Figure 2 — RequestVote RPC and AppendEntries RPC
 

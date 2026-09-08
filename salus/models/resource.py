@@ -9,7 +9,7 @@ constraints, and a Raft-replicated deployment status.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -143,7 +143,7 @@ class Resource(BaseModel):
     """
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique resource ID")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Identity
     name: str = Field(..., min_length=1, description="Human-readable name (e.g., 'SAR Team Alpha')")
@@ -168,7 +168,7 @@ class Resource(BaseModel):
     # State — replicated via Raft
     status: ResourceStatus = Field(ResourceStatus.AVAILABLE, description="Current deployment state")
     last_transition_at: datetime = Field(
-        default_factory=datetime.utcnow,
+        default_factory=lambda: datetime.now(UTC),
         description="Timestamp of last state transition",
     )
 
@@ -237,7 +237,7 @@ class ResourceStateTransition(BaseModel):
     """
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Transition ID")
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # What changed
     resource_id: str = Field(..., description="Resource being transitioned")

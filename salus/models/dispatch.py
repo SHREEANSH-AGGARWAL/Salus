@@ -9,7 +9,7 @@ through AI recommendation to Incident Commander confirmation to Raft commit.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -48,7 +48,7 @@ class DamageAssessmentResult(BaseModel):
     key_factors: list[str] = Field(default_factory=list, description="Critical factors identified")
     estimated_trapped: int = Field(0, ge=0, description="Estimated trapped persons")
     estimated_injured: int = Field(0, ge=0, description="Estimated injured persons")
-    assessed_at: datetime = Field(default_factory=datetime.utcnow)
+    assessed_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     latency_ms: float = Field(0.0, ge=0, description="Assessment time (ms)")
 
 
@@ -94,7 +94,7 @@ class DispatchOrder(BaseModel):
     """
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Dispatch order ID")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Input — what triggered this dispatch
     incident_id: str = Field(..., description="Parent incident")

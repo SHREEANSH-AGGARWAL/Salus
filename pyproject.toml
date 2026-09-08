@@ -67,7 +67,7 @@ packages = ["salus", "simulation"]
 [tool.ruff]
 target-version = "py312"
 line-length = 100
-extend-exclude = ["salus/grpc/raft_pb2.py", "salus/grpc/raft_pb2_grpc.py"]
+extend-exclude = ["salus/transport/raft_pb2.py", "salus/transport/raft_pb2_grpc.py"]
 
 [tool.ruff.lint]
 select = [
@@ -95,7 +95,7 @@ ignore = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"salus/grpc/server.py" = ["N802"]
+"salus/transport/server.py" = ["N802"]
 "tests/*" = ["B007", "F841"]
 
 [tool.black]
@@ -106,13 +106,13 @@ target-version = ["py312"]
 python_version = "3.12"
 plugins = ["pydantic.mypy"]
 exclude = [
-    "salus/grpc/raft_pb2",
+    "salus/transport/raft_pb2",
 ]
 ignore_missing_imports = true
 warn_unused_configs = true
 
 [[tool.mypy.overrides]]
-module = "salus.grpc.*"
+module = "salus.transport.*"
 ignore_errors = true
 
 [tool.pytest.ini_options]

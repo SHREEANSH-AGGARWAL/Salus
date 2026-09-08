@@ -20,7 +20,7 @@ from typing import TYPE_CHECKING, Any
 import grpc
 import structlog
 
-from salus.grpc import raft_pb2, raft_pb2_grpc
+from salus.transport import raft_pb2, raft_pb2_grpc
 
 if TYPE_CHECKING:
     from salus.raft.node import RaftNode

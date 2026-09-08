@@ -8,7 +8,7 @@ priority scoring, and resource needs tracking.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import IntEnum, StrEnum
 
 from pydantic import BaseModel, Field
@@ -92,8 +92,8 @@ class DisasterZone(BaseModel):
     """
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique zone ID")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Identity
     name: str = Field(..., min_length=1, description="Zone name (e.g., 'Sector 7 — Old City')")

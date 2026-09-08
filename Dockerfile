@@ -20,8 +20,8 @@ COPY simulation/ simulation/
 
 # Compile proto files
 RUN uv pip install --system grpcio-tools && \
-    python -m grpc_tools.protoc -Iproto --python_out=salus/grpc --grpc_python_out=salus/grpc proto/raft.proto && \
-    sed -i 's/import raft_pb2 as raft__pb2/from salus.grpc import raft_pb2 as raft__pb2/' salus/grpc/raft_pb2_grpc.py
+    python -m grpc_tools.protoc -Iproto --python_out=salus/transport --grpc_python_out=salus/transport proto/raft.proto && \
+    sed -i 's/import raft_pb2 as raft__pb2/from salus.transport import raft_pb2 as raft__pb2/' salus/transport/raft_pb2_grpc.py
 
 # Install package
 RUN uv pip install --system --no-cache .

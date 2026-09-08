@@ -15,13 +15,13 @@ import socket
 import pytest
 
 from salus.dispatch.state_machine import DispatchStateMachine
-from salus.grpc.client import GRPCClientPool
-from salus.grpc.server import create_grpc_server
 from salus.models.common import GeoLocation
 from salus.models.resource import Resource, ResourceStatus, ResourceType
 from salus.models.zone import AccessStatus, DamageLevel, DisasterZone, ZoneBoundary, ZonePriority
 from salus.raft.log_entry import CommandType
 from salus.raft.node import RaftNode
+from salus.transport.client import GRPCClientPool
+from salus.transport.server import create_grpc_server
 
 
 def get_free_port() -> int:

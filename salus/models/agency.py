@@ -8,7 +8,7 @@ and its associated Incident Command Post (ICP) which runs a Raft node.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -51,7 +51,7 @@ class Agency(BaseModel):
     """
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()), description="Unique agency ID")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Identity
     name: str = Field(..., min_length=1, description="Agency name (e.g., 'NDRF Battalion 1')")

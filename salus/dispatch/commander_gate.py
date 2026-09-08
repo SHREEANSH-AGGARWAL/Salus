@@ -16,7 +16,7 @@ Flow:
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timedelta
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 
 import structlog
@@ -45,8 +45,8 @@ class PendingConfirmation(BaseModel):
     """
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    expires_at: datetime = Field(default_factory=lambda: datetime.utcnow() + timedelta(seconds=120))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    expires_at: datetime = Field(default_factory=lambda: datetime.now(UTC) + timedelta(seconds=120))
 
     # What's being recommended
     dispatch_order_id: str = Field(..., description="Dispatch order ID")
@@ -73,7 +73,7 @@ class PendingConfirmation(BaseModel):
     @property
     def is_expired(self) -> bool:
         """True if this confirmation has timed out."""
-        return datetime.utcnow() > self.expires_at and not self.resolved
+        return datetime.now(UTC) > self.expires_at and not self.resolved
 
 
 class CommanderGate:
@@ -129,7 +129,7 @@ class CommanderGate:
             ai_confidence=ai_confidence,
             ai_reasoning=ai_reasoning,
             alternative_resources=alternative_resources or [],
-            expires_at=datetime.utcnow() + timedelta(seconds=self.timeout_seconds),
+            expires_at=datetime.now(UTC) + timedelta(seconds=self.timeout_seconds),
         )
         self.pending[confirmation.id] = confirmation
 
@@ -169,7 +169,7 @@ class CommanderGate:
         confirmation = self._get_and_validate(confirmation_id)
 
         confirmation.resolved = True
-        confirmation.resolved_at = datetime.utcnow()
+        confirmation.resolved_at = datetime.now(UTC)
         confirmation.action = GateAction.CONFIRM
         confirmation.commander_id = commander_id
         confirmation.commander_agency_id = commander_agency_id
@@ -212,7 +212,7 @@ class CommanderGate:
         confirmation = self._get_and_validate(confirmation_id)
 
         confirmation.resolved = True
-        confirmation.resolved_at = datetime.utcnow()
+        confirmation.resolved_at = datetime.now(UTC)
         confirmation.action = GateAction.REJECT
         confirmation.commander_id = commander_id
         confirmation.commander_agency_id = commander_agency_id
@@ -256,7 +256,7 @@ class CommanderGate:
         confirmation = self._get_and_validate(confirmation_id)
 
         confirmation.resolved = True
-        confirmation.resolved_at = datetime.utcnow()
+        confirmation.resolved_at = datetime.now(UTC)
         confirmation.action = GateAction.OVERRIDE
         confirmation.commander_id = commander_id
         confirmation.commander_agency_id = commander_agency_id
@@ -288,7 +288,7 @@ class CommanderGate:
         for cid, confirmation in list(self.pending.items()):
             if confirmation.is_expired:
                 confirmation.resolved = True
-                confirmation.resolved_at = datetime.utcnow()
+                confirmation.resolved_at = datetime.now(UTC)
                 confirmation.action = GateAction.TIMEOUT
                 self._archive(cid)
                 expired.append(confirmation)

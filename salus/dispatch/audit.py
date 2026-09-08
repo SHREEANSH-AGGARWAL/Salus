@@ -13,7 +13,7 @@ post-incident analysis.
 
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from enum import StrEnum
 
 import structlog
@@ -58,7 +58,7 @@ class AuditEntry(BaseModel):
     or action for post-incident review.
     """
 
-    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     action: AuditAction = Field(..., description="Type of action")
 
     # Context

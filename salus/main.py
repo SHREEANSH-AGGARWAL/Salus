@@ -22,10 +22,10 @@ from salus.config import NodeConfig
 from salus.dispatch.audit import DispatchAuditLog
 from salus.dispatch.commander_gate import CommanderGate
 from salus.dispatch.state_machine import DispatchStateMachine
-from salus.grpc.client import GRPCClientPool
-from salus.grpc.server import create_grpc_server
 from salus.raft.node import RaftNode
 from salus.raft.wal import WALManager
+from salus.transport.client import GRPCClientPool
+from salus.transport.server import create_grpc_server
 
 logger = structlog.get_logger()
 
