@@ -141,7 +141,7 @@ def _rule_based_decide(
     **kwargs: Any,
 ) -> tuple[str, float]:
     """Deterministic fallback decision synthesis."""
-    confidence = (damage.confidence * 0.5 + match.match_score * 0.5)
+    confidence = damage.confidence * 0.5 + match.match_score * 0.5
     if any_fallback:
         confidence *= 0.75  # Heavier discount — all agents used fallback
 

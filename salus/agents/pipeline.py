@@ -198,7 +198,9 @@ class DispatchPipeline:
             # ── Finalize ─────────────────────────────────────────────────
             order.assigned_resource_id = match_result.recommended_resource_id
             order.assigned_resource_name = match_result.recommended_resource_name
-            order.status = DispatchStatus.FALLBACK if any_fallback else DispatchStatus.AWAITING_CONFIRMATION
+            order.status = (
+                DispatchStatus.FALLBACK if any_fallback else DispatchStatus.AWAITING_CONFIRMATION
+            )
             order.used_fallback = any_fallback
             order.total_latency_ms = round((time.monotonic() - t_pipeline_start) * 1000, 1)
 

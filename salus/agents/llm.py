@@ -62,9 +62,7 @@ def _create_ollama(config: LLMConfig) -> BaseChatModel:
     try:
         from langchain_ollama import ChatOllama
     except ImportError as e:
-        raise ImportError(
-            "langchain-ollama is not installed. Run: pip install 'salus[ai]'"
-        ) from e
+        raise ImportError("langchain-ollama is not installed. Run: pip install 'salus[ai]'") from e
 
     return ChatOllama(
         model=config.model,
@@ -96,9 +94,7 @@ def _create_openai(config: LLMConfig) -> BaseChatModel:
     try:
         from langchain_openai import ChatOpenAI
     except ImportError as e:
-        raise ImportError(
-            "langchain-openai is not installed. Run: pip install 'salus[ai]'"
-        ) from e
+        raise ImportError("langchain-openai is not installed. Run: pip install 'salus[ai]'") from e
 
     return ChatOpenAI(
         model=config.model,

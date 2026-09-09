@@ -354,9 +354,7 @@ class PipelineRequest(BaseModel):
 
 
 @router.post("/run-pipeline")
-async def run_dispatch_pipeline(
-    body: PipelineRequest, request: Request
-) -> dict[str, Any]:
+async def run_dispatch_pipeline(body: PipelineRequest, request: Request) -> dict[str, Any]:
     """Trigger the 5-agent AI pipeline for an incident and zone.
 
     Runs: Damage Assessment → Resource Matching → Protocol Lookup →

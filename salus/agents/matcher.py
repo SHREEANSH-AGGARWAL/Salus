@@ -107,14 +107,16 @@ def _format_resources(resources: list[Resource]) -> str:
             flags.append("Debris clearing")
         if caps.can_perform_firefighting:
             flags.append("Firefighting")
-        items.append({
-            "id": r.id,
-            "name": r.name,
-            "type": r.resource_type.value,
-            "capabilities": flags,
-            "max_range_km": caps.max_range_km,
-            "hours_deployed": r.hours_deployed,
-        })
+        items.append(
+            {
+                "id": r.id,
+                "name": r.name,
+                "type": r.resource_type.value,
+                "capabilities": flags,
+                "max_range_km": caps.max_range_km,
+                "hours_deployed": r.hours_deployed,
+            }
+        )
     return json.dumps(items, indent=2)
 
 

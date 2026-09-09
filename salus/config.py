@@ -109,7 +109,6 @@ class LLMConfig(BaseSettings):
     model_config = SettingsConfigDict(env_prefix="SALUS_LLM_")
 
 
-
 class ClusterPeer(BaseSettings):
     """A peer ICP node in the Raft cluster."""
 

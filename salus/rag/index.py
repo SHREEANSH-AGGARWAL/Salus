@@ -111,14 +111,13 @@ class KnowledgeIndex:
             )
         except ImportError as e:
             raise RuntimeError(
-                "ChromaDB is not installed. Install the AI extras: "
-                "pip install 'salus[ai]'"
+                "ChromaDB is not installed. Install the AI extras: pip install 'salus[ai]'"
             ) from e
 
         self._client = chromadb.PersistentClient(path=self.config.chroma_persist_dir)
         self._embedding_fn = SentenceTransformerEmbeddingFunction(
             model_name=self.config.embedding_model
-        ) # fix this later cant get sentence transformer to work
+        )  # fix this later cant get sentence transformer to work
         self._collection = self._client.get_or_create_collection(
             name=self.COLLECTION_NAME,
             # pyrefly: ignore [bad-argument-type]

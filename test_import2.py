@@ -1,0 +1,1 @@
+from chromadb.utils.embedding_functions import SentenceTransformerEmbeddingFunction
