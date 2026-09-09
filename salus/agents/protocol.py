@@ -161,6 +161,7 @@ def _static_fallback(
     knowledge_index: KnowledgeIndex,
     incident_description: str,
     zone: DisasterZone,
+    **kwargs: Any,
 ) -> str:
     """Deterministic fallback: return a static protocol based on incident type."""
     incident_type = _classify_incident(incident_description, zone)

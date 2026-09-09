@@ -107,6 +107,7 @@ async def _llm_route(
 def _rule_based_route(
     resource: Resource,
     zone: DisasterZone,
+    **kwargs: Any,
 ) -> RouteResult:
     """Deterministic fallback: use RoutePlanner directly."""
     return _planner.plan_route(resource, zone)

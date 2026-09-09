@@ -166,6 +166,7 @@ async def _llm_match(
 def _rule_based_match(
     zone: DisasterZone,
     resources: list[Resource],
+    **kwargs: Any,
 ) -> ResourceMatchResult:
     """Deterministic fallback: use rule-based matcher."""
     t0 = time.monotonic()

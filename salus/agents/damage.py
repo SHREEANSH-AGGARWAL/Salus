@@ -117,6 +117,7 @@ async def _llm_assess(
 def _rule_based_assess(
     zone: DisasterZone,
     incident_description: str,
+    **kwargs: Any,
 ) -> DamageAssessmentResult:
     """Deterministic fallback: use rule-based priority scorer."""
     t0 = time.monotonic()

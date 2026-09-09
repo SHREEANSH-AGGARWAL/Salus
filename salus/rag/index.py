@@ -106,7 +106,9 @@ class KnowledgeIndex:
 
         try:
             import chromadb
-            from chromadb.utils.embedding_functions.sentence_transformer_embedding_function import SentenceTransformerEmbeddingFunction
+            from chromadb.utils.embedding_functions.sentence_transformer_embedding_function import (
+                SentenceTransformerEmbeddingFunction,
+            )
         except ImportError as e:
             raise RuntimeError(
                 "ChromaDB is not installed. Install the AI extras: "
@@ -114,7 +116,7 @@ class KnowledgeIndex:
             ) from e
 
         self._client = chromadb.PersistentClient(path=self.config.chroma_persist_dir)
-        self._embedding_fn = SentenceTransformerEmbeddingFunction(  
+        self._embedding_fn = SentenceTransformerEmbeddingFunction(
             model_name=self.config.embedding_model
         ) # fix this later cant get sentence transformer to work
         self._collection = self._client.get_or_create_collection(

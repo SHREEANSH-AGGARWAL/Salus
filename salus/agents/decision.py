@@ -91,6 +91,7 @@ async def _llm_decide(
     route: RouteResult,
     protocol: str,
     any_fallback: bool,
+    **kwargs: Any,
 ) -> tuple[str, float]:
     """Call LLM to synthesise a final decision."""
     from langchain_core.messages import HumanMessage, SystemMessage
@@ -137,6 +138,7 @@ def _rule_based_decide(
     route: RouteResult,
     protocol: str,
     any_fallback: bool,
+    **kwargs: Any,
 ) -> tuple[str, float]:
     """Deterministic fallback decision synthesis."""
     confidence = (damage.confidence * 0.5 + match.match_score * 0.5)
