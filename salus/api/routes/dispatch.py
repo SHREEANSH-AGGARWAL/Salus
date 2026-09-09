@@ -336,3 +336,126 @@ async def reject_dispatch(
         )
 
     return {"status": "rejected", "confirmation_id": confirmation_id}
+
+
+# ── AI Pipeline Endpoint ──────────────────────────────────────────────────────
+
+
+class PipelineRequest(BaseModel):
+    """Request body for the 5-agent AI dispatch pipeline."""
+
+    incident_id: str = Field(..., description="Parent incident ID")
+    zone_id: str = Field(..., description="Target zone ID")
+    incident_description: str = Field(
+        ...,
+        min_length=10,
+        description="Human-readable description of the incident",
+    )
+
+
+@router.post("/run-pipeline")
+async def run_dispatch_pipeline(
+    body: PipelineRequest, request: Request
+) -> dict[str, Any]:
+    """Trigger the 5-agent AI pipeline for an incident and zone.
+
+    Runs: Damage Assessment → Resource Matching → Protocol Lookup →
+          Route Planning → Decision Synthesis.
+
+    Returns the full DispatchOrder with all agent outputs populated.
+    The order is placed in the Commander Gate automatically and awaits
+    IC confirmation via POST /dispatch/{confirmation_id}/confirm.
+
+    Circuit-breakers ensure this endpoint always returns within
+    (5 agents × timeout) seconds — even if all LLM calls fail.
+    """
+    pipeline = getattr(request.app.state, "pipeline", None)
+    gate: CommanderGate | None = getattr(request.app.state, "gate", None)
+    audit = getattr(request.app.state, "audit_log", None)
+    broadcaster = getattr(request.app.state, "broadcaster", None)
+
+    if pipeline is None:
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "AI pipeline not initialised. "
+                "Ensure SALUS_LLM__PROVIDER is set and the AI extras are installed."
+            ),
+        )
+    if gate is None:
+        raise HTTPException(status_code=503, detail="Commander gate not initialised")
+
+    try:
+        order = await pipeline.run(
+            incident_id=body.incident_id,
+            zone_id=body.zone_id,
+            incident_description=body.incident_description,
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Pipeline error: {e}") from e
+
+    if order.status.value == "failed":
+        raise HTTPException(
+            status_code=500,
+            detail=order.error or "Pipeline failed without a reason.",
+        )
+
+    # Auto-queue the recommendation into the Commander Gate
+    if order.assigned_resource_id and gate is not None:
+        match = order.resource_match
+        confirmation = gate.request_confirmation(
+            dispatch_order_id=order.id,
+            resource_id=order.assigned_resource_id,
+            resource_name=order.assigned_resource_name or "",
+            zone_id=order.zone_id,
+            zone_name="",
+            incident_id=order.incident_id,
+            ai_confidence=order.decision_confidence or 0.0,
+            ai_reasoning=order.decision_summary or "",
+            alternative_resources=match.alternative_resource_ids if match else [],
+        )
+
+        if audit:
+            audit.log(
+                action=AuditAction.AI_DECISION,
+                actor_id="dispatch_pipeline",
+                actor_type="agent",
+                resource_id=order.assigned_resource_id,
+                zone_id=order.zone_id,
+                incident_id=order.incident_id,
+                dispatch_id=order.id,
+                reasoning=order.decision_summary or "",
+                confidence=order.decision_confidence,
+                ai_recommendation=order.assigned_resource_name,
+            )
+
+        if broadcaster:
+            await broadcaster.broadcast_event(
+                "pipeline_recommendation_ready",
+                {
+                    "dispatch_order_id": order.id,
+                    "confirmation_id": confirmation.id,
+                    "resource_id": order.assigned_resource_id,
+                    "resource_name": order.assigned_resource_name,
+                    "zone_id": order.zone_id,
+                    "confidence": order.decision_confidence,
+                    "used_fallback": order.used_fallback,
+                    "total_latency_ms": order.total_latency_ms,
+                },
+            )
+
+        return {
+            "status": "pipeline_complete",
+            "dispatch_order": order.model_dump(mode="json"),
+            "confirmation_id": confirmation.id,
+            "confirmation_expires_at": confirmation.expires_at.isoformat(),
+            "used_fallback": order.used_fallback,
+            "total_latency_ms": order.total_latency_ms,
+        }
+
+    return {
+        "status": "pipeline_complete_no_resource",
+        "dispatch_order": order.model_dump(mode="json"),
+        "used_fallback": order.used_fallback,
+        "total_latency_ms": order.total_latency_ms,
+    }

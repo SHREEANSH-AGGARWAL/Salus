@@ -76,6 +76,27 @@ async def start_node(config: NodeConfig) -> None:
     audit_log = DispatchAuditLog()
     broadcaster = WebSocketBroadcaster()
 
+    # 4.5 AI Pipeline (optional — gracefully skipped if AI extras not installed)
+    pipeline = None
+    try:
+        from salus.agents.pipeline import DispatchPipeline
+
+        pipeline = await DispatchPipeline.create_and_ingest(
+            llm_config=config.llm,
+            rag_config=config.rag,
+            state_machine=state_machine,
+            icp_id=config.node_id,
+            data_dir=Path("data"),
+        )
+        logger.info("ai_pipeline_ready", provider=config.llm.provider, model=config.llm.model)
+    except ImportError:
+        logger.warning(
+            "ai_pipeline_skipped",
+            reason="AI extras not installed. Run: pip install 'salus[ai]'",
+        )
+    except Exception:
+        logger.exception("ai_pipeline_init_failed")
+
     # 5. REST & WebSocket API App
     app = create_app(
         node=node,
@@ -85,6 +106,8 @@ async def start_node(config: NodeConfig) -> None:
         broadcaster=broadcaster,
         cors_origins=config.api.cors_origins,
     )
+    # Attach pipeline to app state so route handlers can access it
+    app.state.pipeline = pipeline
 
     # 6. gRPC Server
     grpc_server = await create_grpc_server(

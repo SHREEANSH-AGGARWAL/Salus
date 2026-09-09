@@ -20,7 +20,7 @@ from __future__ import annotations
 from salus.models.zone import AccessStatus, DamageLevel, DisasterZone, ZoneNeeds, ZonePriority
 
 
-def score_zone_priority(zone: DisasterZone) -> ZonePriority:
+def score_zone_priority(zone: DisasterZone) -> tuple[ZonePriority, list[str]]:
     """Compute a zone's priority from its current damage assessment.
 
     This is deterministic: same inputs always produce same output.
@@ -31,12 +31,29 @@ def score_zone_priority(zone: DisasterZone) -> ZonePriority:
         zone: The disaster zone to score.
 
     Returns:
-        ZonePriority (P1–P5).
+        Tuple of (ZonePriority (P1–P5), list of key scoring factors).
     """
     raw_score = compute_raw_score(
         zone.needs, zone.damage_level, zone.access_status, zone.time_since_last_contact_minutes
     )
-    return raw_score_to_priority(raw_score)
+    priority = raw_score_to_priority(raw_score)
+
+    # Build a list of key factors for logging and IC display
+    factors: list[str] = []
+    if zone.needs.estimated_trapped > 0:
+        factors.append(f"{zone.needs.estimated_trapped} estimated trapped")
+    if zone.needs.estimated_injured > 0:
+        factors.append(f"{zone.needs.estimated_injured} estimated injured")
+    if zone.damage_level.value in ("catastrophic", "severe"):
+        factors.append(f"Structural damage: {zone.damage_level.value}")
+    if zone.access_status.value in ("cut_off", "air_only", "water_only"):
+        factors.append(f"Access: {zone.access_status.value}")
+    if zone.time_since_last_contact_minutes >= 60:
+        factors.append(f"No contact for {zone.time_since_last_contact_minutes} minutes")
+    if not factors:
+        factors.append(f"Raw score: {raw_score:.2f}")
+
+    return priority, factors
 
 
 def compute_raw_score(

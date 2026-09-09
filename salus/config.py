@@ -82,10 +82,20 @@ class RAGConfig(BaseSettings):
 
 
 class LLMConfig(BaseSettings):
-    """LLM and agent pipeline settings."""
+    """LLM and agent pipeline settings.
 
-    provider: str = Field("openai", description="LLM provider: 'openai' or 'ollama'")
-    model: str = Field("gpt-4o", description="Model name")
+    Default: Ollama (free, local, offline-capable). Set SALUS_LLM__PROVIDER to
+    change provider. Supported: 'ollama', 'google', 'openai'.
+    """
+
+    provider: str = Field(
+        "ollama",
+        description="LLM provider: 'ollama' (default, free), 'google' (Gemini free tier), 'openai'",
+    )
+    model: str = Field(
+        "llama3.1:8b",
+        description="Model name. Ollama: 'llama3.1:8b'. Google: 'gemini-1.5-flash'. OpenAI: 'gpt-4o'.",
+    )
     ollama_base_url: str = Field("http://localhost:11434", description="Ollama API base URL")
     timeout_seconds: float = Field(
         5.0,
@@ -97,6 +107,7 @@ class LLMConfig(BaseSettings):
     max_retries: int = Field(1, ge=0, le=3, description="LLM call retries before fallback")
 
     model_config = SettingsConfigDict(env_prefix="SALUS_LLM_")
+
 
 
 class ClusterPeer(BaseSettings):

@@ -70,7 +70,7 @@ class TestScoreZonePriority:
             access=AccessStatus.AIR_ONLY,
             time_since_contact=200,
         )
-        assert score_zone_priority(zone) == ZonePriority.CRITICAL
+        assert score_zone_priority(zone)[0] == ZonePriority.CRITICAL
 
     def test_high_priority_zone(self) -> None:
         """Significant casualties + severe damage → P2 or P3 (boundary case)."""
@@ -81,7 +81,7 @@ class TestScoreZonePriority:
             access=AccessStatus.RESTRICTED,
             time_since_contact=45,
         )
-        priority = score_zone_priority(zone)
+        priority, _ = score_zone_priority(zone)
         assert priority in (ZonePriority.CRITICAL, ZonePriority.HIGH, ZonePriority.MODERATE)
 
     def test_low_priority_zone(self) -> None:
@@ -93,7 +93,7 @@ class TestScoreZonePriority:
             access=AccessStatus.OPEN,
             time_since_contact=5,
         )
-        priority = score_zone_priority(zone)
+        priority, _ = score_zone_priority(zone)
         assert priority in (ZonePriority.LOW, ZonePriority.MINIMAL)
 
     def test_minimal_damage_zone(self) -> None:
@@ -105,7 +105,7 @@ class TestScoreZonePriority:
             access=AccessStatus.OPEN,
             time_since_contact=0,
         )
-        assert score_zone_priority(zone) == ZonePriority.MINIMAL
+        assert score_zone_priority(zone)[0] == ZonePriority.MINIMAL
 
     def test_unknown_damage_moderate_treatment(self) -> None:
         """Unknown damage treated as moderate (precautionary)."""
@@ -116,7 +116,7 @@ class TestScoreZonePriority:
             access=AccessStatus.UNKNOWN,
             time_since_contact=30,
         )
-        priority = score_zone_priority(zone)
+        priority, _ = score_zone_priority(zone)
         # Unknown damage + some casualties → should be at least MODERATE
         assert priority.value <= ZonePriority.MODERATE.value
 
@@ -167,7 +167,7 @@ class TestDeterminism:
             access=AccessStatus.RESTRICTED,
             time_since_contact=120,
         )
-        results = [score_zone_priority(zone) for _ in range(100)]
+        results = [score_zone_priority(zone)[0] for _ in range(100)]
         assert all(r == results[0] for r in results)
 
     def test_raw_score_deterministic(self) -> None:
