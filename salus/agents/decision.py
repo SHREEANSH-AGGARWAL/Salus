@@ -12,7 +12,7 @@ Output: (decision_summary: str, confidence: float)
 from __future__ import annotations
 
 import time
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 import structlog
 
