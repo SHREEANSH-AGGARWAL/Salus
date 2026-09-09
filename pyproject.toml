@@ -45,6 +45,9 @@ ai = [
     # RAG knowledge index
     "chromadb>=0.5,<1",
     "sentence-transformers>=3.0,<4",
+    "numpy<2",
+    "scipy<1.14",
+    "pandas<3",
 
     # LangChain + Ollama (free, local, default)
     "langchain>=0.2,<1",
