@@ -3,7 +3,7 @@
  *
  * Canvas rendering engine for Raft cluster topology and zone map visualization,
  * real-time WebSocket event streaming, drag-and-drop entity placement, and
- * dispatch confirmation UI.
+ * dispatch confirmation UI
  */
 
 (() => {
