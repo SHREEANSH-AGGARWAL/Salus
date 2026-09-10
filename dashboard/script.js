@@ -13,9 +13,9 @@
   // Configuration
   // ════════════════════════════════════════════════════════════════════════════
 
-  const API_BASE = window.location.port === '' || window.location.protocol === 'file:'
-    ? 'http://localhost:8001'
-    : `${window.location.protocol}//${window.location.hostname}:8001`;
+  const API_BASE = window.location.protocol === 'file:'
+    ? 'http://localhost:8000'
+    : window.location.origin;
   const WS_URL = API_BASE.replace(/^http/, 'ws') + '/ws/events';
   const POLL_CLUSTER_MS = 2000;
   const POLL_PENDING_MS = 3000;
@@ -917,15 +917,25 @@
 
   function renderEventLog() {
     const container = document.getElementById('event-log');
-    const empty = document.getElementById('events-empty');
+    let empty = document.getElementById('events-empty');
+
+    if (!empty) {
+      empty = document.createElement('div');
+      empty.className = 'empty-state';
+      empty.id = 'events-empty';
+      empty.innerHTML = `
+        <div class="empty-state__icon">📡</div>
+        <div class="empty-state__text">Waiting for WebSocket events from the cluster…</div>
+      `;
+    }
 
     if (state.events.length === 0) {
       container.innerHTML = '';
       container.appendChild(empty);
+      empty.style.display = '';
       return;
     }
 
-    empty.style.display = 'none';
     // Only re-render if the container child count doesn't match
     // (for performance, avoid full re-render every time)
     while (container.children.length > state.events.length) {
