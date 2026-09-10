@@ -7,11 +7,13 @@ Provides REST endpoints and WebSocket event streams for the Salus Command Dashbo
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any
 
 import structlog
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from salus.api.routes import (
     audit_router,
@@ -116,5 +118,14 @@ def create_app(
                 "events_ws": "/ws/events",
             },
         }
+    # Mount dashboard static files (if present)
+    dashboard_dir = Path(__file__).resolve().parent.parent.parent / "dashboard"
+    if dashboard_dir.is_dir():
+        app.mount(
+            "/dashboard",
+            StaticFiles(directory=str(dashboard_dir), html=True),
+            name="dashboard",
+        )
+        logger.info("dashboard_mounted", path=str(dashboard_dir))
 
     return app

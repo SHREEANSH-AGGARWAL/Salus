@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Salus Command Dashboard — Real-time distributed disaster response coordination with Raft consensus visualization, resource dispatch management, and cluster health monitoring.">
+  <title>Salus — Disaster Response Command Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🛡️</text></svg>">
+</head>
+<body>
+
+<div id="app">
+  <!-- ════════════════════════════════════════════════ HEADER ════════════════════════════════════════════════ -->
+  <header class="header" id="header">
+    <div class="header__brand">
+      <div class="header__logo">S</div>
+      <div>
+        <div class="header__title">SALUS COMMAND</div>
+        <div class="header__subtitle">Disaster Response Consensus Network</div>
+      </div>
+    </div>
+    <div class="header__status">
+      <div class="header__cluster-info">
+        <div id="cluster-state-chip" class="status-chip status-chip--disconnected">
+          <span class="status-dot status-dot--disconnected" id="cluster-state-dot"></span>
+          <span id="cluster-state-label">OFFLINE</span>
+        </div>
+        <div class="status-chip" style="background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+          TERM <span id="cluster-term" class="mono" style="color: var(--text-primary); margin-left: 4px;">—</span>
+        </div>
+        <div class="status-chip" style="background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
+          LOG <span id="cluster-log-length" class="mono" style="color: var(--text-primary); margin-left: 4px;">—</span>
+        </div>
+      </div>
+      <div class="ws-indicator" id="ws-indicator">
+        <span class="status-dot status-dot--disconnected" id="ws-status-dot"></span>
+        <span id="ws-status-text">WS Disconnected</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ════════════════════════════════════════════════ SIDEBAR ════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <!-- Command Posts -->
+    <section class="sidebar__section">
+      <h2 class="sidebar__section-title">Command Posts</h2>
+      <div class="entity-card" draggable="true" data-entity-type="icp" data-entity-id="alpha" id="entity-icp-alpha">
+        <div class="entity-card__icon entity-card__icon--icp">🏛️</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">ICP Alpha</span>
+          <span class="entity-card__type">Fire Department</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="icp" data-entity-id="bravo" id="entity-icp-bravo">
+        <div class="entity-card__icon entity-card__icon--icp">🏥</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">ICP Bravo</span>
+          <span class="entity-card__type">Emergency Medical</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="icp" data-entity-id="charlie" id="entity-icp-charlie">
+        <div class="entity-card__icon entity-card__icon--icp">🔍</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">ICP Charlie</span>
+          <span class="entity-card__type">Urban SAR</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Resources -->
+    <section class="sidebar__section">
+      <h2 class="sidebar__section-title">Resources</h2>
+      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="ambulance_als" id="entity-res-ambulance">
+        <div class="entity-card__icon entity-card__icon--resource">🚑</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">ALS Ambulance</span>
+          <span class="entity-card__type">ambulance_als</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="fire_engine" id="entity-res-fire">
+        <div class="entity-card__icon entity-card__icon--resource">🚒</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">Fire Engine</span>
+          <span class="entity-card__type">fire_engine</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="helicopter_transport" id="entity-res-helo">
+        <div class="entity-card__icon entity-card__icon--resource">🚁</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">Transport Helicopter</span>
+          <span class="entity-card__type">helicopter_transport</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="sar_team_urban" id="entity-res-sar">
+        <div class="entity-card__icon entity-card__icon--resource">🦺</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">SAR Team (Urban)</span>
+          <span class="entity-card__type">sar_team_urban</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="hazmat_team" id="entity-res-hazmat">
+        <div class="entity-card__icon entity-card__icon--resource">☣️</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">HAZMAT Team</span>
+          <span class="entity-card__type">hazmat_team</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="k9_unit" id="entity-res-k9">
+        <div class="entity-card__icon entity-card__icon--resource">🐕</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">K9 Search Unit</span>
+          <span class="entity-card__type">k9_unit</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Disasters -->
+    <section class="sidebar__section">
+      <h2 class="sidebar__section-title">Disasters</h2>
+      <div class="entity-card" draggable="true" data-entity-type="disaster" data-disaster-type="earthquake" id="entity-dis-earthquake">
+        <div class="entity-card__icon entity-card__icon--disaster">🌍</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">Earthquake</span>
+          <span class="entity-card__type">magnitude 7.0+</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="disaster" data-disaster-type="flood" id="entity-dis-flood">
+        <div class="entity-card__icon entity-card__icon--disaster">🌊</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">Flood</span>
+          <span class="entity-card__type">flash flood / river</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="disaster" data-disaster-type="fire" id="entity-dis-fire">
+        <div class="entity-card__icon entity-card__icon--disaster">🔥</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">Wildfire</span>
+          <span class="entity-card__type">structural / wildland</span>
+        </div>
+      </div>
+      <div class="entity-card" draggable="true" data-entity-type="disaster" data-disaster-type="chemical" id="entity-dis-chemical">
+        <div class="entity-card__icon entity-card__icon--disaster">⚗️</div>
+        <div class="entity-card__info">
+          <span class="entity-card__name">Chemical Spill</span>
+          <span class="entity-card__type">industrial hazmat</span>
+        </div>
+      </div>
+    </section>
+  </aside>
+
+  <!-- ════════════════════════════════════════════════ CANVAS ════════════════════════════════════════════════ -->
+  <main class="canvas-area" id="canvas-area">
+    <div class="canvas-area__overlay">
+      <button class="view-toggle active" id="btn-view-topology" data-view="topology">Cluster Topology</button>
+      <button class="view-toggle" id="btn-view-map" data-view="map">Zone Map</button>
+    </div>
+    <canvas id="main-canvas"></canvas>
+    <div class="canvas-drop-hint" id="canvas-drop-hint">
+      <span class="canvas-drop-hint__text">Drop entity here to add to the map</span>
+    </div>
+  </main>
+
+  <!-- ════════════════════════════════════════════════ RIGHT PANEL ════════════════════════════════════════════════ -->
+  <aside class="right-panel" id="right-panel">
+    <nav class="right-panel__tabs">
+      <button class="right-panel__tab active" id="tab-dispatch" data-tab="dispatch">
+        Dispatch <span class="tab-badge tab-badge--pending" id="dispatch-count" style="display:none;">0</span>
+      </button>
+      <button class="right-panel__tab" id="tab-events" data-tab="events">
+        Events <span class="tab-badge tab-badge--events" id="events-count" style="display:none;">0</span>
+      </button>
+      <button class="right-panel__tab" id="tab-cluster" data-tab="cluster">Cluster</button>
+    </nav>
+
+    <!-- Dispatch Tab -->
+    <div class="right-panel__content" id="panel-dispatch">
+      <div class="dispatch-queue" id="dispatch-queue">
+        <div class="empty-state" id="dispatch-empty">
+          <div class="empty-state__icon">📋</div>
+          <div class="empty-state__text">No pending dispatch recommendations. Run the AI pipeline or drop a disaster on the map.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Events Tab (hidden by default) -->
+    <div class="right-panel__content" id="panel-events" style="display:none;">
+      <div class="event-log" id="event-log">
+        <div class="empty-state" id="events-empty">
+          <div class="empty-state__icon">📡</div>
+          <div class="empty-state__text">Waiting for WebSocket events from the cluster…</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Cluster Tab (hidden by default) -->
+    <div class="right-panel__content" id="panel-cluster" style="display:none;">
+      <div class="section-label">Raft Cluster Nodes</div>
+      <div class="cluster-status" id="cluster-node-list">
+        <!-- Populated by JS -->
+      </div>
+    </div>
+  </aside>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
