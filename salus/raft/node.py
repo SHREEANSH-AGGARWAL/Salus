@@ -804,6 +804,11 @@ class RaftNode:
         # Trigger immediate replication to peers
         await self._send_heartbeats()
 
+        # A single-node cluster reaches quorum on its own log, so nothing would
+        # otherwise advance the commit index — peer responses are the only other
+        # trigger. Harmless with peers: quorum simply is not met yet.
+        self._try_advance_commit_index()
+
         return {
             "status": "accepted",
             "log_index": entry.index,
