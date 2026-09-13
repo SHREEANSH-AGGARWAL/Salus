@@ -98,9 +98,9 @@ class LLMConfig(BaseSettings):
     )
     ollama_base_url: str = Field("http://localhost:11434", description="Ollama API base URL")
     timeout_seconds: float = Field(
-        5.0,
+        60.0,
         ge=1.0,
-        le=30.0,
+        le=300.0,
         description="LLM timeout — triggers circuit-breaker fallback to rule-based dispatch",
     )
     temperature: float = Field(0.1, ge=0.0, le=2.0, description="LLM temperature")
