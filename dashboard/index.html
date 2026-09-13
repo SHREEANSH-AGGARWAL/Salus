@@ -3,204 +3,493 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Salus Command Dashboard — Real-time distributed disaster response coordination with Raft consensus visualization, resource dispatch management, and cluster health monitoring.">
-  <title>Salus — Disaster Response Command Dashboard</title>
+  <meta name="description" content="Salus — God's Eye Tactical Disaster Response Consensus Network & Omniscient Command HUD">
+  <title>SALUS // GOD'S EYE — Tactical Response Consensus HUD</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Orbitron:wght@500;700;900&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🛡️</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>👁️</text></svg>">
 </head>
-<body>
+<body class="gods-eye-theme">
 
-<div id="app">
-  <!-- ════════════════════════════════════════════════ HEADER ════════════════════════════════════════════════ -->
-  <header class="header" id="header">
-    <div class="header__brand">
-      <div class="header__logo">S</div>
+<div id="hud-app">
+  <!-- ════════════════════════════════════════════════ TOP STATUS BAR ════════════════════════════════════════════════ -->
+  <header class="hud-header" id="hud-header">
+    <div class="hud-header__brand">
+      <div class="gods-eye-emblem">
+        <div class="emblem-core"></div>
+        <div class="emblem-ring emblem-ring--1"></div>
+        <div class="emblem-ring emblem-ring--2"></div>
+      </div>
       <div>
-        <div class="header__title">SALUS COMMAND</div>
-        <div class="header__subtitle">Disaster Response Consensus Network</div>
+        <div class="hud-header__title">SALUS <span class="text-cyan">// GOD'S EYE</span></div>
+        <div class="hud-header__subtitle">OMNISCIENT DISASTER CONSENSUS NETWORK · C4ISR TERMINAL</div>
       </div>
     </div>
-    <div class="header__status">
-      <div class="header__cluster-info">
-        <div id="cluster-state-chip" class="status-chip status-chip--disconnected">
-          <span class="status-dot status-dot--disconnected" id="cluster-state-dot"></span>
-          <span id="cluster-state-label">OFFLINE</span>
-        </div>
-        <div class="status-chip" style="background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
-          TERM <span id="cluster-term" class="mono" style="color: var(--text-primary); margin-left: 4px;">—</span>
-        </div>
-        <div class="status-chip" style="background: var(--bg-glass); border: 1px solid var(--border-subtle); color: var(--text-secondary);">
-          LOG <span id="cluster-log-length" class="mono" style="color: var(--text-primary); margin-left: 4px;">—</span>
+
+    <!-- Cluster Consensus Telemetry -->
+    <div class="hud-header__telemetry">
+      <div class="telemetry-block" id="cluster-state-block">
+        <span class="telemetry-label">RAFT NODE STATE</span>
+        <div class="telemetry-val telemetry-val--leader" id="cluster-state-val">
+          <span class="pulse-dot pulse-dot--green" id="cluster-state-dot"></span>
+          <span id="cluster-state-text">ALPHA · LEADER</span>
         </div>
       </div>
-      <div class="ws-indicator" id="ws-indicator">
-        <span class="status-dot status-dot--disconnected" id="ws-status-dot"></span>
-        <span id="ws-status-text">WS Disconnected</span>
+
+      <div class="telemetry-block">
+        <span class="telemetry-label">CONSENSUS TERM</span>
+        <div class="telemetry-val font-mono" id="cluster-term-val">TERM 02</div>
+      </div>
+
+      <div class="telemetry-block">
+        <span class="telemetry-label">RAFT LOG INDEX</span>
+        <div class="telemetry-val font-mono text-cyan" id="cluster-log-val">LOG #014</div>
+      </div>
+
+      <div class="telemetry-block">
+        <span class="telemetry-label">QUORUM HEALTH</span>
+        <div class="telemetry-val font-mono text-green" id="cluster-quorum-val">2/3 MAJORITY</div>
+      </div>
+
+      <div class="telemetry-block" id="degraded-mode-block" style="display:none;">
+        <span class="telemetry-label text-red">DEGRADED MODE</span>
+        <div class="telemetry-val font-mono text-red blink">PARTITION ACTIVE</div>
+      </div>
+
+      <!-- Engine Status & Clock -->
+      <div class="telemetry-block">
+        <span class="telemetry-label">SYSTEM CLOCK (UTC)</span>
+        <div class="telemetry-val font-mono" id="hud-clock">00:00:00 UTC</div>
+      </div>
+
+      <div class="engine-badge" id="engine-badge" title="Click to toggle between Live Backend and Autonomous Simulation Engine">
+        <span class="badge-dot" id="engine-dot"></span>
+        <span id="engine-label">LIVE BACKEND</span>
       </div>
     </div>
   </header>
 
-  <!-- ════════════════════════════════════════════════ SIDEBAR ════════════════════════════════════════════════ -->
-  <aside class="sidebar" id="sidebar">
-    <!-- Command Posts -->
-    <section class="sidebar__section">
-      <h2 class="sidebar__section-title">Command Posts</h2>
-      <div class="entity-card" draggable="true" data-entity-type="icp" data-entity-id="alpha" id="entity-icp-alpha">
-        <div class="entity-card__icon entity-card__icon--icp">🏛️</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">ICP Alpha</span>
-          <span class="entity-card__type">Fire Department</span>
-        </div>
+  <!-- ════════════════════════════════════════════════ MAIN GRID ════════════════════════════════════════════════ -->
+  <div class="hud-body">
+    <!-- LEFT RAIL: COMMAND POSTS & ASSETS -->
+    <aside class="hud-rail hud-rail--left" id="hud-left-rail">
+      <!-- Rail Header -->
+      <div class="rail-header">
+        <span class="rail-title"><span class="bracket">[</span> TACTICAL ASSETS <span class="bracket">]</span></span>
+        <button class="hud-btn-mini" id="btn-quick-deploy-modal" title="Quick Manual Dispatch">⚡ DEPLOY</button>
       </div>
-      <div class="entity-card" draggable="true" data-entity-type="icp" data-entity-id="bravo" id="entity-icp-bravo">
-        <div class="entity-card__icon entity-card__icon--icp">🏥</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">ICP Bravo</span>
-          <span class="entity-card__type">Emergency Medical</span>
-        </div>
-      </div>
-      <div class="entity-card" draggable="true" data-entity-type="icp" data-entity-id="charlie" id="entity-icp-charlie">
-        <div class="entity-card__icon entity-card__icon--icp">🔍</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">ICP Charlie</span>
-          <span class="entity-card__type">Urban SAR</span>
-        </div>
-      </div>
-    </section>
 
-    <!-- Resources -->
-    <section class="sidebar__section">
-      <h2 class="sidebar__section-title">Resources</h2>
-      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="ambulance_als" id="entity-res-ambulance">
-        <div class="entity-card__icon entity-card__icon--resource">🚑</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">ALS Ambulance</span>
-          <span class="entity-card__type">ambulance_als</span>
-        </div>
-      </div>
-      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="fire_engine" id="entity-res-fire">
-        <div class="entity-card__icon entity-card__icon--resource">🚒</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">Fire Engine</span>
-          <span class="entity-card__type">fire_engine</span>
-        </div>
-      </div>
-      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="helicopter_transport" id="entity-res-helo">
-        <div class="entity-card__icon entity-card__icon--resource">🚁</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">Transport Helicopter</span>
-          <span class="entity-card__type">helicopter_transport</span>
-        </div>
-      </div>
-      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="sar_team_urban" id="entity-res-sar">
-        <div class="entity-card__icon entity-card__icon--resource">🦺</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">SAR Team (Urban)</span>
-          <span class="entity-card__type">sar_team_urban</span>
-        </div>
-      </div>
-      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="hazmat_team" id="entity-res-hazmat">
-        <div class="entity-card__icon entity-card__icon--resource">☣️</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">HAZMAT Team</span>
-          <span class="entity-card__type">hazmat_team</span>
-        </div>
-      </div>
-      <div class="entity-card" draggable="true" data-entity-type="resource" data-resource-type="k9_unit" id="entity-res-k9">
-        <div class="entity-card__icon entity-card__icon--resource">🐕</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">K9 Search Unit</span>
-          <span class="entity-card__type">k9_unit</span>
-        </div>
-      </div>
-    </section>
+      <!-- Command Posts (ICPs) -->
+      <section class="hud-section">
+        <div class="section-tag">INCIDENT COMMAND POSTS</div>
+        <div class="icp-grid">
+          <div class="icp-card active" data-icp="alpha" id="icp-card-alpha">
+            <div class="icp-card__status-bar"></div>
+            <div class="icp-card__body">
+              <div class="icp-card__top">
+                <span class="icp-card__id">ICP ALPHA</span>
+                <span class="icp-card__badge badge-leader" id="badge-icp-alpha">LEADER</span>
+              </div>
+              <div class="icp-card__sub">Fire & Rescue HQ</div>
+              <div class="icp-card__metrics">
+                <span>TERM <b id="term-alpha">2</b></span>
+                <span>LOG <b id="log-alpha">14</b></span>
+                <span class="text-green">ONLINE</span>
+              </div>
+            </div>
+          </div>
 
-    <!-- Disasters -->
-    <section class="sidebar__section">
-      <h2 class="sidebar__section-title">Disasters</h2>
-      <div class="entity-card" draggable="true" data-entity-type="disaster" data-disaster-type="earthquake" id="entity-dis-earthquake">
-        <div class="entity-card__icon entity-card__icon--disaster">🌍</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">Earthquake</span>
-          <span class="entity-card__type">magnitude 7.0+</span>
-        </div>
-      </div>
-      <div class="entity-card" draggable="true" data-entity-type="disaster" data-disaster-type="flood" id="entity-dis-flood">
-        <div class="entity-card__icon entity-card__icon--disaster">🌊</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">Flood</span>
-          <span class="entity-card__type">flash flood / river</span>
-        </div>
-      </div>
-      <div class="entity-card" draggable="true" data-entity-type="disaster" data-disaster-type="fire" id="entity-dis-fire">
-        <div class="entity-card__icon entity-card__icon--disaster">🔥</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">Wildfire</span>
-          <span class="entity-card__type">structural / wildland</span>
-        </div>
-      </div>
-      <div class="entity-card" draggable="true" data-entity-type="disaster" data-disaster-type="chemical" id="entity-dis-chemical">
-        <div class="entity-card__icon entity-card__icon--disaster">⚗️</div>
-        <div class="entity-card__info">
-          <span class="entity-card__name">Chemical Spill</span>
-          <span class="entity-card__type">industrial hazmat</span>
-        </div>
-      </div>
-    </section>
-  </aside>
+          <div class="icp-card" data-icp="bravo" id="icp-card-bravo">
+            <div class="icp-card__status-bar icp-card__status-bar--follower"></div>
+            <div class="icp-card__body">
+              <div class="icp-card__top">
+                <span class="icp-card__id">ICP BRAVO</span>
+                <span class="icp-card__badge badge-follower" id="badge-icp-bravo">FOLLOWER</span>
+              </div>
+              <div class="icp-card__sub">Emergency Medical (EMS)</div>
+              <div class="icp-card__metrics">
+                <span>TERM <b id="term-bravo">2</b></span>
+                <span>LOG <b id="log-bravo">14</b></span>
+                <span class="text-cyan">ONLINE</span>
+              </div>
+            </div>
+          </div>
 
-  <!-- ════════════════════════════════════════════════ CANVAS ════════════════════════════════════════════════ -->
-  <main class="canvas-area" id="canvas-area">
-    <div class="canvas-area__overlay">
-      <button class="view-toggle active" id="btn-view-topology" data-view="topology">Cluster Topology</button>
-      <button class="view-toggle" id="btn-view-map" data-view="map">Zone Map</button>
+          <div class="icp-card" data-icp="charlie" id="icp-card-charlie">
+            <div class="icp-card__status-bar icp-card__status-bar--follower"></div>
+            <div class="icp-card__body">
+              <div class="icp-card__top">
+                <span class="icp-card__id">ICP CHARLIE</span>
+                <span class="icp-card__badge badge-follower" id="badge-icp-charlie">FOLLOWER</span>
+              </div>
+              <div class="icp-card__sub">Urban SAR & HAZMAT</div>
+              <div class="icp-card__metrics">
+                <span>TERM <b id="term-charlie">2</b></span>
+                <span>LOG <b id="log-charlie">14</b></span>
+                <span class="text-cyan">ONLINE</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filterable Resources -->
+      <section class="hud-section hud-section--flex">
+        <div class="section-tag flex-between">
+          <span>DEPLOYABLE RESOURCES</span>
+          <span class="font-mono text-cyan" id="resource-count-tag">6 READY</span>
+        </div>
+
+        <div class="filter-pills">
+          <button class="filter-pill active" data-filter="all">ALL</button>
+          <button class="filter-pill" data-filter="available">AVAIL</button>
+          <button class="filter-pill" data-filter="dispatched">DEPLOYED</button>
+        </div>
+
+        <div class="resource-list" id="resource-list">
+          <!-- Populated by JavaScript -->
+        </div>
+      </section>
+
+      <!-- Disaster Zones Overview -->
+      <section class="hud-section">
+        <div class="section-tag flex-between">
+          <span>ACTIVE DISASTER SECTORS</span>
+          <span class="font-mono text-red" id="zone-count-tag">3 ZONES</span>
+        </div>
+        <div class="zone-mini-list" id="zone-mini-list">
+          <!-- Populated by JavaScript -->
+        </div>
+      </section>
+    </aside>
+
+    <!-- CENTER: GOD'S EYE OMNISCIENT CANVAS -->
+    <main class="hud-canvas-container" id="hud-canvas-container">
+      <!-- Canvas Control Deck -->
+      <div class="canvas-control-deck">
+        <div class="view-switch-group">
+          <button class="hud-tab-btn active" id="btn-view-radar" data-view="radar">
+            <span class="hud-icon">🌐</span> GOD'S EYE RADAR MAP
+          </button>
+          <button class="hud-tab-btn" id="btn-view-raft" data-view="raft">
+            <span class="hud-icon">⚡</span> RAFT CONSENSUS MESH
+          </button>
+        </div>
+
+        <div class="canvas-action-group">
+          <button class="hud-tool-btn" id="btn-toggle-sweep" title="Toggle Radar Sweep Beam">
+            <span class="status-indicator active" id="sweep-indicator"></span> RADAR SWEEP
+          </button>
+          <button class="hud-tool-btn" id="btn-double-dispatch-attack" title="Test Double Dispatch Prevention Invariant">
+            ⚡ TEST DOUBLE-DISPATCH
+          </button>
+          <button class="hud-tool-btn" id="btn-reset-view" title="Reset Map Centering">
+            🎯 RE-CENTER
+          </button>
+        </div>
+      </div>
+
+      <!-- Main HTML5 60fps Canvas -->
+      <canvas id="gods-eye-canvas"></canvas>
+
+      <!-- HUD Corner Reticles -->
+      <div class="hud-reticle hud-reticle--tl"></div>
+      <div class="hud-reticle hud-reticle--tr"></div>
+      <div class="hud-reticle hud-reticle--bl"></div>
+      <div class="hud-reticle hud-reticle--br"></div>
+
+      <!-- Live Coordinates Watermark -->
+      <div class="hud-coords-watermark">
+        <span>LAT: 28°36'42"N · LON: 77°12'29"E</span>
+        <span>SECURITY LEVEL: OMNI-CLEARANCE 05</span>
+        <span id="canvas-target-focus">TARGET LOCK: ALL SECTORS</span>
+      </div>
+
+      <!-- Canvas Drop Overlay for Drag & Drop -->
+      <div class="canvas-drop-overlay" id="canvas-drop-overlay">
+        <div class="drop-target-box">
+          <div class="drop-pulse-ring"></div>
+          <div class="drop-target-text">RELEASE TO DEPLOY RESOURCE TO SECTOR</div>
+        </div>
+      </div>
+
+      <!-- Interactive Entity Inspector Card (Floats over Canvas when entity is clicked) -->
+      <div class="tactical-inspector-card" id="tactical-inspector-card" style="display:none;">
+        <div class="inspector-card__header">
+          <div class="flex-align gap-8">
+            <span class="inspector-badge" id="inspector-badge">RESOURCE</span>
+            <span class="inspector-title" id="inspector-title">ALS Ambulance 101</span>
+          </div>
+          <button class="inspector-close" id="btn-close-inspector">&times;</button>
+        </div>
+        <div class="inspector-card__body" id="inspector-body">
+          <!-- Populated by JavaScript based on clicked entity -->
+        </div>
+      </div>
+
+      <!-- Invariant Double-Dispatch Alert Banner -->
+      <div class="invariant-banner" id="invariant-banner">
+        <div class="invariant-banner__icon">🛡️</div>
+        <div class="invariant-banner__content">
+          <div class="invariant-banner__title">STRUCTURAL INVARIANT ENFORCED: NO DOUBLE-DISPATCH</div>
+          <div class="invariant-banner__text" id="invariant-banner-text">
+            Raft linearizable state transition structurally rejected concurrent dispatch for resource.
+          </div>
+        </div>
+        <button class="invariant-banner__close" id="btn-close-invariant">&times;</button>
+      </div>
+    </main>
+
+    <!-- RIGHT RAIL: COMMAND DECK -->
+    <aside class="hud-rail hud-rail--right" id="hud-right-rail">
+      <!-- Tab Navigation -->
+      <nav class="hud-nav-tabs">
+        <button class="hud-nav-tab active" id="tab-btn-gate" data-panel="panel-gate">
+          IC GATE <span class="hud-badge hud-badge--amber" id="gate-badge-count">1</span>
+        </button>
+        <button class="hud-nav-tab" id="tab-btn-pipeline" data-panel="panel-pipeline">
+          AI PIPELINE
+        </button>
+        <button class="hud-nav-tab" id="tab-btn-chaos" data-panel="panel-chaos">
+          CHAOS
+        </button>
+        <button class="hud-nav-tab" id="tab-btn-audit" data-panel="panel-audit">
+          AUDIT LOG
+        </button>
+      </nav>
+
+      <!-- TAB 1: INCIDENT COMMANDER GATE -->
+      <div class="hud-panel active" id="panel-gate">
+        <div class="panel-section-title">
+          <span>HUMAN-IN-THE-LOOP COMMANDER GATE</span>
+          <span class="subtext">Awaiting IC Confirmation</span>
+        </div>
+
+        <div class="dispatch-cards-queue" id="dispatch-cards-queue">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+
+      <!-- TAB 2: 5-AGENT AI PIPELINE LAUNCHER -->
+      <div class="hud-panel" id="panel-pipeline" style="display:none;">
+        <div class="panel-section-title">
+          <span>5-AGENT DISPATCH PIPELINE</span>
+          <span class="subtext">Damage → Resource → Protocol → Routing → Decision</span>
+        </div>
+
+        <!-- Visual 5-Agent Step Visualizer -->
+        <div class="pipeline-flow-diagram">
+          <div class="pipeline-step" id="pipe-step-1">
+            <span class="pipe-num">01</span>
+            <span class="pipe-name">DAMAGE ASSESSMENT</span>
+          </div>
+          <div class="pipeline-step" id="pipe-step-2">
+            <span class="pipe-num">02</span>
+            <span class="pipe-name">RESOURCE MATCHING</span>
+          </div>
+          <div class="pipeline-step" id="pipe-step-3">
+            <span class="pipe-num">03</span>
+            <span class="pipe-name">PROTOCOL LOOKUP (RAG)</span>
+          </div>
+          <div class="pipeline-step" id="pipe-step-4">
+            <span class="pipe-num">04</span>
+            <span class="pipe-name">ROUTING & ETA</span>
+          </div>
+          <div class="pipeline-step" id="pipe-step-5">
+            <span class="pipe-num">05</span>
+            <span class="pipe-name">DECISION SYNTHESIS</span>
+          </div>
+        </div>
+
+        <!-- Quick Scenario Presets -->
+        <div class="scenario-presets">
+          <div class="section-tag">SIMULATE DISASTER EVENT (1-CLICK RUN)</div>
+          <div class="preset-buttons">
+            <button class="preset-btn preset-btn--red" data-preset="earthquake">
+              <span class="preset-icon">🌍</span>
+              <div class="preset-text">
+                <span class="preset-title">7.2 M Earthquake</span>
+                <span class="preset-desc">CBD Sector · Collapsed Structures</span>
+              </div>
+            </button>
+            <button class="preset-btn preset-btn--cyan" data-preset="flood">
+              <span class="preset-icon">🌊</span>
+              <div class="preset-text">
+                <span class="preset-title">Flash River Surge</span>
+                <span class="preset-desc">Riverfront Lowlands · 500 Stranded</span>
+              </div>
+            </button>
+            <button class="preset-btn preset-btn--amber" data-preset="chemical">
+              <span class="preset-icon">☣️</span>
+              <div class="preset-text">
+                <span class="preset-title">Hazmat Toxic Spill</span>
+                <span class="preset-desc">Industrial Corridor · Vapour Cloud</span>
+              </div>
+            </button>
+            <button class="preset-btn preset-btn--purple" data-preset="fire">
+              <span class="preset-icon">🔥</span>
+              <div class="preset-text">
+                <span class="preset-title">Multi-Alarm Firestorm</span>
+                <span class="preset-desc">Warehouse Complex · Evacuation</span>
+              </div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Custom Incident Prompt Input -->
+        <div class="custom-incident-form">
+          <div class="section-tag">CUSTOM DISASTER DISPATCH PROMPT</div>
+          <textarea id="custom-incident-text" rows="3" class="hud-textarea" placeholder="Enter incident report or emergency transmission details..."></textarea>
+          <div class="form-row">
+            <select id="custom-target-zone" class="hud-select">
+              <option value="zone-cbd-01">Target: Sector 4 — CBD (P1)</option>
+              <option value="zone-river-02">Target: East Riverfront (P2)</option>
+              <option value="zone-ind-03">Target: North Industrial (P3)</option>
+            </select>
+            <button class="hud-btn hud-btn--primary" id="btn-run-custom-pipeline">
+              ⚡ RUN PIPELINE
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 3: CHAOS & NETWORK PARTITION ENGINE -->
+      <div class="hud-panel" id="panel-chaos" style="display:none;">
+        <div class="panel-section-title">
+          <span>CHAOS RESILIENCE ENGINE</span>
+          <span class="subtext">Simulate Failures, Partitions & Double-Dispatch</span>
+        </div>
+
+        <div class="chaos-action-list">
+          <div class="chaos-card">
+            <div class="chaos-card__header">
+              <span class="chaos-card__icon">⚡</span>
+              <div>
+                <div class="chaos-card__name">NETWORK PARTITION (ISOLATE ALPHA)</div>
+                <div class="chaos-card__desc">Splits Alpha into minority. Verifies degraded mode (§3.2) & quorum reelection.</div>
+              </div>
+            </div>
+            <div class="chaos-card__actions">
+              <button class="hud-btn hud-btn--danger" id="btn-chaos-partition">ISOLATE NODE ALPHA</button>
+              <button class="hud-btn hud-btn--success" id="btn-chaos-heal">HEAL PARTITION</button>
+            </div>
+          </div>
+
+          <div class="chaos-card">
+            <div class="chaos-card__header">
+              <span class="chaos-card__icon">👑</span>
+              <div>
+                <div class="chaos-card__name">KILL ACTIVE LEADER</div>
+                <div class="chaos-card__desc">Abruptly crashes the Raft leader. Triggers automated election timeout.</div>
+              </div>
+            </div>
+            <div class="chaos-card__actions">
+              <button class="hud-btn hud-btn--warning" id="btn-chaos-kill-leader">KILL CURRENT LEADER</button>
+            </div>
+          </div>
+
+          <div class="chaos-card">
+            <div class="chaos-card__header">
+              <span class="chaos-card__icon">💥</span>
+              <div>
+                <div class="chaos-card__name">SIMULTANEOUS DOUBLE-DISPATCH ATTACK</div>
+                <div class="chaos-card__desc">Fires 2 concurrent dispatches for the exact same helicopter to prove Raft linearity.</div>
+              </div>
+            </div>
+            <div class="chaos-card__actions">
+              <button class="hud-btn hud-btn--primary" id="btn-chaos-double-dispatch">FIRE DOUBLE DISPATCH</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB 4: IMMUTABLE AUDIT LOG -->
+      <div class="hud-panel" id="panel-audit" style="display:none;">
+        <div class="panel-section-title flex-between">
+          <div>
+            <span>IMMUTABLE AUDIT LOG</span>
+            <div class="subtext">Cryptographically Hash-Chained Decisions</div>
+          </div>
+          <button class="hud-btn-mini" id="btn-clear-audit">REFRESH</button>
+        </div>
+
+        <div class="audit-stream" id="audit-stream">
+          <!-- Populated by JavaScript -->
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════ MODALS ════════════════════════════════════════════════ -->
+
+<!-- Modal 1: Commander Override Modal -->
+<div class="hud-modal" id="modal-override" style="display:none;">
+  <div class="hud-modal__backdrop"></div>
+  <div class="hud-modal__dialog">
+    <div class="hud-modal__header">
+      <span class="hud-modal__title">COMMANDER DISPATCH OVERRIDE</span>
+      <button class="hud-modal__close" id="btn-close-override-modal">&times;</button>
     </div>
-    <canvas id="main-canvas"></canvas>
-    <div class="canvas-drop-hint" id="canvas-drop-hint">
-      <span class="canvas-drop-hint__text">Drop entity here to add to the map</span>
-    </div>
-  </main>
-
-  <!-- ════════════════════════════════════════════════ RIGHT PANEL ════════════════════════════════════════════════ -->
-  <aside class="right-panel" id="right-panel">
-    <nav class="right-panel__tabs">
-      <button class="right-panel__tab active" id="tab-dispatch" data-tab="dispatch">
-        Dispatch <span class="tab-badge tab-badge--pending" id="dispatch-count" style="display:none;">0</span>
-      </button>
-      <button class="right-panel__tab" id="tab-events" data-tab="events">
-        Events <span class="tab-badge tab-badge--events" id="events-count" style="display:none;">0</span>
-      </button>
-      <button class="right-panel__tab" id="tab-cluster" data-tab="cluster">Cluster</button>
-    </nav>
-
-    <!-- Dispatch Tab -->
-    <div class="right-panel__content" id="panel-dispatch">
-      <div class="dispatch-queue" id="dispatch-queue">
-        <div class="empty-state" id="dispatch-empty">
-          <div class="empty-state__icon">📋</div>
-          <div class="empty-state__text">No pending dispatch recommendations. Run the AI pipeline or drop a disaster on the map.</div>
-        </div>
+    <div class="hud-modal__content">
+      <p class="modal-instruction">
+        The Incident Commander is exercising manual authority to override the AI recommendation. Select the replacement resource to deploy:
+      </p>
+      <div class="form-group">
+        <label>RECOMMENDED UNIT</label>
+        <input type="text" id="override-orig-resource" class="hud-input" readonly>
+      </div>
+      <div class="form-group">
+        <label>OVERRIDE WITH REPLACEMENT RESOURCE</label>
+        <select id="override-select-resource" class="hud-select">
+          <!-- Populated dynamically -->
+        </select>
+      </div>
+      <div class="form-group">
+        <label>COMMANDER JUSTIFICATION / NOTES</label>
+        <input type="text" id="override-notes" class="hud-input" value="IC operational override: unit selected for specialized capability.">
       </div>
     </div>
+    <div class="hud-modal__footer">
+      <button class="hud-btn hud-btn--secondary" id="btn-cancel-override">CANCEL</button>
+      <button class="hud-btn hud-btn--warning" id="btn-submit-override">CONFIRM & COMMIT OVERRIDE</button>
+    </div>
+  </div>
+</div>
 
-    <!-- Events Tab (hidden by default) -->
-    <div class="right-panel__content" id="panel-events" style="display:none;">
-      <div class="event-log" id="event-log">
-        <div class="empty-state" id="events-empty">
-          <div class="empty-state__icon">📡</div>
-          <div class="empty-state__text">Waiting for WebSocket events from the cluster…</div>
-        </div>
+<!-- Modal 2: Quick Deploy Modal -->
+<div class="hud-modal" id="modal-quick-deploy" style="display:none;">
+  <div class="hud-modal__backdrop"></div>
+  <div class="hud-modal__dialog">
+    <div class="hud-modal__header">
+      <span class="hud-modal__title">QUICK MANUAL RESOURCE DISPATCH</span>
+      <button class="hud-modal__close" id="btn-close-quick-deploy-modal">&times;</button>
+    </div>
+    <div class="hud-modal__content">
+      <div class="form-group">
+        <label>SELECT AVAILABLE RESOURCE</label>
+        <select id="quick-deploy-resource" class="hud-select"></select>
+      </div>
+      <div class="form-group">
+        <label>TARGET DISASTER SECTOR</label>
+        <select id="quick-deploy-zone" class="hud-select"></select>
+      </div>
+      <div class="form-group">
+        <label>DISPATCH PRIORITY</label>
+        <select id="quick-deploy-priority" class="hud-select">
+          <option value="CRITICAL">P1 — CRITICAL (Life Threat)</option>
+          <option value="HIGH">P2 — HIGH (Severe Damage)</option>
+          <option value="MEDIUM">P3 — MEDIUM (Support Needed)</option>
+        </select>
       </div>
     </div>
-
-    <!-- Cluster Tab (hidden by default) -->
-    <div class="right-panel__content" id="panel-cluster" style="display:none;">
-      <div class="section-label">Raft Cluster Nodes</div>
-      <div class="cluster-status" id="cluster-node-list">
-        <!-- Populated by JS -->
-      </div>
+    <div class="hud-modal__footer">
+      <button class="hud-btn hud-btn--secondary" id="btn-cancel-quick-deploy">CANCEL</button>
+      <button class="hud-btn hud-btn--success" id="btn-submit-quick-deploy">DISPATCH TO SECTOR</button>
     </div>
-  </aside>
+  </div>
 </div>
 
 <script src="script.js"></script>
