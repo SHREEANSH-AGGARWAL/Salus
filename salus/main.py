@@ -89,13 +89,13 @@ async def start_node(config: NodeConfig) -> None:
             data_dir=Path("data"),
         )
         logger.info("ai_pipeline_ready", provider=config.llm.provider, model=config.llm.model)
-    except ImportError:
+    except (ImportError, RuntimeError) as exc:
         logger.warning(
             "ai_pipeline_skipped",
-            reason="AI extras not installed. Run: pip install 'salus[ai]'",
+            reason=f"AI extras not installed or missing dependencies ({exc}). Optional AI pipeline disabled.",
         )
-    except Exception:
-        logger.exception("ai_pipeline_init_failed")
+    except Exception as exc:
+        logger.warning("ai_pipeline_init_failed", error=str(exc))
 
     # 5. REST & WebSocket API App
     app = create_app(
@@ -162,6 +162,11 @@ async def start_node(config: NodeConfig) -> None:
 
 def main() -> None:
     """CLI entry point for salus-node."""
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+    if hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+
     config = NodeConfig()
 
     logger.info(
