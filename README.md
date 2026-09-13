@@ -445,13 +445,7 @@ uv run pytest -m integration
 uv run pytest --cov=salus --cov-report=term-missing
 ```
 
-### Linting and Formatting
 
-```bash
-uv run ruff check .
-uv run ruff format .
-uv run mypy salus/
-```
 
 ---
 
