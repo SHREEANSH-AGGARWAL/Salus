@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Salus — disaster response coordination for Delhi NCR. Live map, AI dispatch planning, and commander approval gate.">
+  <title>Salus — Delhi Command</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Rajdhani:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><circle cx='16' cy='16' r='13' fill='none' stroke='%232dd4bf' stroke-width='2'/><circle cx='16' cy='16' r='4' fill='%232dd4bf'/></svg>">
+</head>
+<body>
+
+<div id="toast-container"></div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     ONBOARDING
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="startup-overlay">
+  <div class="startup-grid">
+
+    <!-- Left: what this thing is -->
+    <aside class="startup-brief">
+      <div class="brand-emblem brand-emblem--lg" aria-hidden="true">
+        <span class="emblem-ring"></span><span class="emblem-ring"></span>
+        <span class="emblem-sweep"></span><span class="emblem-core"></span>
+      </div>
+      <h1>SALUS</h1>
+      <p class="startup-brief__tagline">Disaster response coordination for Delhi&nbsp;NCR</p>
+
+      <p class="startup-brief__lede">
+        When several command posts respond to the same disaster, two of them can
+        send the same ambulance to different places. Salus makes that impossible:
+        every dispatch is agreed by the whole network before it counts, and a
+        human has to approve it.
+      </p>
+
+      <ol class="startup-brief__steps">
+        <li><span>1</span><div><strong>See the picture</strong>Units and disaster zones on a live map of Delhi.</div></li>
+        <li><span>2</span><div><strong>Ask for a plan</strong>The AI planner suggests which unit to send where, and why.</div></li>
+        <li><span>3</span><div><strong>You decide</strong>Nothing moves until you approve it. Every choice is logged.</div></li>
+      </ol>
+
+      <p class="startup-brief__note">New here? Everything has a plain-language explanation inside — press <kbd>?</kbd> at any time.</p>
+    </aside>
+
+    <!-- Right: the actual steps -->
+    <div class="startup-panes">
+
+      <section id="startup-step-1" class="startup-card">
+        <div class="startup-card__step">Step 1 of 2</div>
+        <h2>Who is on duty?</h2>
+        <p class="startup-card__desc">
+          Your name and agency get attached to every decision you make, so the
+          record shows who approved what. Defaults are filled in — change them
+          or just continue.
+        </p>
+
+        <div class="form-group">
+          <label for="input-commander-id">Your commander ID</label>
+          <input type="text" id="input-commander-id" value="CDR-DELHI-01" autocomplete="off">
+        </div>
+
+        <div class="form-group">
+          <label for="input-agency-id">Your agency</label>
+          <select id="input-agency-id-preset">
+            <option value="Delhi Disaster Management Authority (DDMA)">Delhi Disaster Management Authority (DDMA)</option>
+            <option value="Delhi Fire Service (DFS)">Delhi Fire Service (DFS)</option>
+            <option value="Delhi Police">Delhi Police</option>
+            <option value="CATS Ambulance Service">CATS Ambulance Service</option>
+            <option value="NDRF Delhi-NCR">NDRF Delhi-NCR</option>
+            <option value="__custom">Other…</option>
+          </select>
+          <input type="text" id="input-agency-id" class="hidden" placeholder="Agency name" autocomplete="off">
+        </div>
+
+        <button class="btn btn-primary btn-block" id="btn-continue-step1">Continue</button>
+      </section>
+
+      <section id="startup-step-2" class="startup-card hidden">
+        <div class="startup-card__step">Step 2 of 2</div>
+        <h2>What should be on the map?</h2>
+        <p class="startup-card__desc">
+          There is nothing in the system yet. Load the Delhi scenario to get a
+          realistic board you can play with, or start blank and add your own.
+        </p>
+
+        <button class="env-option env-option--primary" id="btn-load-demo">
+          <span class="env-option__badge">Recommended</span>
+          <span class="env-option__title">Load the Delhi scenario</span>
+          <span class="env-option__desc">
+            12 emergency units across Delhi — fire tenders, CATS ambulances, NDRF
+            rescue teams, an air force chopper, flood boats, K9 and drone teams —
+            plus 6 affected sectors from Connaught Place to the Yamuna floodplain.
+          </span>
+        </button>
+
+        <button class="env-option" id="btn-start-empty">
+          <span class="env-option__title">Start with an empty map</span>
+          <span class="env-option__desc">Add your own units and zones from scratch.</span>
+        </button>
+
+        <div id="startup-progress" class="hidden">
+          <div class="progress-log" id="demo-progress-log"></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     HELP DRAWER
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div class="help-backdrop" id="help-overlay">
+  <div class="help-panel" role="dialog" aria-label="Help and glossary">
+    <div class="help-head">
+      <h2>How this dashboard works</h2>
+      <button class="icon-btn" id="help-close" aria-label="Close help">✕</button>
+    </div>
+    <div class="help-body">
+
+      <section>
+        <h3>The one-minute version</h3>
+        <p>
+          Salus tracks emergency <strong>units</strong> (ambulances, fire tenders,
+          rescue teams) and disaster <strong>zones</strong> (places that need help)
+          across Delhi. Either you ask the AI planner for a recommendation, or you
+          pick a unit yourself — then you approve, change, or reject it. Only
+          approved dispatches become real, and once a unit is committed to a zone
+          no other command post can send it somewhere else.
+        </p>
+        <div class="help-flow">
+          <span>Zone reported</span><i>→</i><span>AI planner <em>or</em> your own pick</span><i>→</i>
+          <span class="help-flow__you">You approve</span><i>→</i><span>Network agrees</span><i>→</i><span>Unit dispatched</span>
+        </div>
+        <p style="margin-top:12px;">
+          The approval step is never skipped — not by the AI, not by you. If the
+          planner is not installed on this server, <strong>Send a unit manually</strong>
+          does the same job with you choosing the unit.
+        </p>
+      </section>
+
+      <section>
+        <h3>The four screens</h3>
+        <dl class="help-dl">
+          <dt>Operations</dt><dd>The live map, the unit and zone lists, and what needs your attention right now.</dd>
+          <dt>Approvals</dt><dd>Dispatch recommendations waiting on you. Approve, swap the unit, or reject — each with a reason. This is also where you start a dispatch, with the planner or by hand.</dd>
+          <dt>Network</dt><dd>Health of this command post and its links to the others. Mostly you only look here when something is wrong.</dd>
+          <dt>History</dt><dd>The permanent record: every AI recommendation and every human decision, in order.</dd>
+        </dl>
+      </section>
+
+      <section>
+        <h3>Using the map</h3>
+        <ul class="help-list">
+          <li><strong>Drag</strong> to move around · <strong>scroll</strong> or <strong>double-click</strong> to zoom</li>
+          <li><strong>Click</strong> a unit or zone to open its details on the right</li>
+          <li><strong>Layers</strong> (top right) hide things you do not need — routes, place names, the sweep</li>
+          <li><strong>Pick on map</strong> inside the add-unit and add-zone forms lets you click a location instead of typing coordinates</li>
+          <li>Rings are distance from the middle of the view; ticks are compass bearings</li>
+        </ul>
+      </section>
+
+      <section>
+        <h3>Words you will see</h3>
+        <dl class="help-dl">
+          <dt>Command post / node</dt><dd>One Salus server. Several of them run together, one per agency control room.</dd>
+          <dt>Leader</dt><dd>The command post currently allowed to write changes. The others copy from it. If it fails, another takes over automatically.</dd>
+          <dt>Agreed entries</dt><dd>Changes a majority of command posts have stored. Once agreed, a change cannot be lost or reversed.</dd>
+          <dt>Majority needed</dt><dd>How many command posts must agree before a change counts. With 3 posts, that is 2.</dd>
+          <dt>Round</dt><dd>Increments each time the network elects a new leader. A jumping number means leadership is unstable.</dd>
+          <dt>Isolated / degraded</dt><dd>This post has lost contact with the majority. It can no longer be sure a unit is free, so every unit is shown as <em>unconfirmed</em> and approvals are blocked. That is deliberate.</dd>
+          <dt>Unconfirmed unit</dt><dd>We cannot currently verify this unit's status. Do not act on it.</dd>
+          <dt>Approval gate</dt><dd>The rule that no dispatch happens without a named human saying yes.</dd>
+          <dt>Override</dt><dd>You approve the dispatch but send a different unit than the one recommended.</dd>
+          <dt>Fallback plan</dt><dd>The recommendation came from simple rules instead of the AI, because the AI was unavailable. Read it more carefully.</dd>
+          <dt>Confidence</dt><dd>How sure the planner is. Below 50% treat it as a suggestion, not an answer.</dd>
+        </dl>
+      </section>
+
+      <section>
+        <h3>Keyboard</h3>
+        <div class="help-keys">
+          <div><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd><kbd>4</kbd><span>Switch screens</span></div>
+          <div><kbd>/</kbd><span>Search units and zones</span></div>
+          <div><kbd>P</kbd><span>Plan a dispatch with the AI</span></div>
+          <div><kbd>M</kbd><span>Send a unit manually</span></div>
+          <div><kbd>F</kbd><span>Fit map to everything</span></div>
+          <div><kbd>R</kbd><span>Recentre on Delhi</span></div>
+          <div><kbd>+</kbd><kbd>−</kbd><span>Zoom</span></div>
+          <div><kbd>?</kbd><span>This help</span></div>
+          <div><kbd>Esc</kbd><span>Close / deselect</span></div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     APP SHELL
+     ═══════════════════════════════════════════════════════════════════════ -->
+<div id="app-shell">
+
+  <header class="app-header">
+    <div class="app-header__brand">
+      <div class="brand-emblem" aria-hidden="true">
+        <span class="emblem-ring"></span><span class="emblem-ring"></span>
+        <span class="emblem-sweep"></span><span class="emblem-core"></span>
+      </div>
+      <div class="brand-text">
+        <div class="brand-title">SALUS</div>
+        <div class="brand-sub">Delhi NCR Command</div>
+      </div>
+    </div>
+
+    <div class="app-header__telemetry">
+      <div class="chip" data-tip="Which command post you are connected to, and whether it is the one currently allowed to write changes.">
+        <span class="chip-label">Post</span>
+        <span class="chip-value"><span class="dot" id="hdr-state-dot"></span><span id="hdr-node">—</span></span>
+      </div>
+      <div class="chip" data-tip="Live connection for instant updates. If this is offline the screen still refreshes, just more slowly.">
+        <span class="chip-label">Live feed</span>
+        <span class="chip-value"><span class="dot" id="ws-dot"></span><span id="ws-label">—</span></span>
+      </div>
+      <div class="chip" data-tip="Changes stored by a majority of command posts. Once here, a change is permanent.">
+        <span class="chip-label">Agreed</span>
+        <span class="chip-value font-mono" id="hdr-commit">—</span>
+      </div>
+      <div class="chip chip--muted" data-tip="Increments whenever the network elects a new leader.">
+        <span class="chip-label">Round</span>
+        <span class="chip-value font-mono" id="hdr-term">—</span>
+      </div>
+    </div>
+
+    <div class="app-header__actions">
+      <button class="ghost-btn" id="btn-header-demo" data-tip="Add the Delhi sample units and zones to the map.">Load sample data</button>
+      <button class="ghost-btn" id="btn-header-help" data-tip="Glossary, map controls and shortcuts (?)">? Help</button>
+      <div class="commander-badge" id="hdr-commander" data-tip="Signed in as. Your ID is attached to every approval.">—</div>
+    </div>
+  </header>
+
+  <div class="degraded-banner" id="degraded-banner">
+    <strong>Isolated from the network.</strong>
+    This post can no longer confirm whether units are free, so every unit is marked
+    unconfirmed and approvals are blocked until contact is restored.
+  </div>
+
+  <div class="guidance-bar" id="guidance-bar">
+    <span class="guidance-icon" id="guidance-icon">▶</span>
+    <span class="guidance-text" id="guidance-text">Loading…</span>
+    <button class="btn btn-primary btn-sm hidden" id="guidance-action"></button>
+  </div>
+
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="ops">
+      <span class="tab-name">Operations</span><span class="tab-hint">map &amp; status</span>
+    </button>
+    <button class="tab-btn" data-tab="approvals">
+      <span class="tab-name">Approvals <span class="tab-badge" id="approvals-badge"></span></span><span class="tab-hint">your decisions</span>
+    </button>
+    <button class="tab-btn" data-tab="network">
+      <span class="tab-name">Network</span><span class="tab-hint">system health</span>
+    </button>
+    <button class="tab-btn" data-tab="history">
+      <span class="tab-name">History</span><span class="tab-hint">what happened</span>
+    </button>
+  </nav>
+
+  <div class="tab-content">
+
+    <!-- ── OPERATIONS ─────────────────────────────────────────────────── -->
+    <div class="tab-panel active" id="tab-ops">
+      <div class="ops-layout">
+
+        <!-- Left rail -->
+        <aside class="rail rail--left">
+          <div class="segmented" id="rail-switch">
+            <button class="seg-btn active" data-view="units">Units <span class="seg-count" id="count-units">0</span></button>
+            <button class="seg-btn" data-view="zones">Zones <span class="seg-count" id="count-zones">0</span></button>
+          </div>
+
+          <div class="rail-tools">
+            <div class="search-wrap">
+              <span class="search-icon">⌕</span>
+              <input type="text" id="rail-search" placeholder="Search by name, callsign, agency…" autocomplete="off">
+              <button class="search-clear hidden" id="rail-search-clear" aria-label="Clear search">✕</button>
+            </div>
+            <div class="chip-filters" id="unit-filters">
+              <button class="fchip active" data-filter="all">All</button>
+              <button class="fchip" data-filter="available">Ready</button>
+              <button class="fchip" data-filter="dispatched">En route</button>
+              <button class="fchip" data-filter="on_scene">On scene</button>
+              <button class="fchip" data-filter="maintenance">Out</button>
+            </div>
+            <div class="chip-filters hidden" id="zone-filters">
+              <button class="fchip active" data-filter="all">All</button>
+              <button class="fchip" data-filter="critical">P1–P2 urgent</button>
+              <button class="fchip" data-filter="unserved">No units sent</button>
+            </div>
+          </div>
+
+          <div class="rail-list" id="unit-list"></div>
+          <div class="rail-list hidden" id="zone-list"></div>
+
+          <div class="rail-foot">
+            <button class="btn btn-secondary btn-sm btn-block" id="btn-add-unit">+ Add a unit</button>
+            <button class="btn btn-secondary btn-sm btn-block hidden" id="btn-add-zone">+ Add a zone</button>
+          </div>
+        </aside>
+
+        <!-- Map -->
+        <section class="map-stage">
+          <canvas id="radar-canvas"></canvas>
+
+          <div class="map-hud map-hud--tl">
+            <div class="readout-line"><span>CENTRE</span><b id="ro-center">—</b></div>
+            <div class="readout-line"><span>CURSOR</span><b id="ro-cursor">—</b></div>
+            <div class="readout-line"><span>SCALE</span><b id="ro-scale">—</b></div>
+            <div class="readout-place" id="ro-place">—</div>
+          </div>
+
+          <div class="map-hud map-hud--tr">
+            <div class="hud-title">Layers</div>
+            <label class="hud-toggle"><input type="checkbox" data-layer="units" checked><span>Units</span></label>
+            <label class="hud-toggle"><input type="checkbox" data-layer="zones" checked><span>Zones</span></label>
+            <label class="hud-toggle"><input type="checkbox" data-layer="routes" checked><span>Dispatch routes</span></label>
+            <label class="hud-toggle"><input type="checkbox" data-layer="places" checked><span>Delhi landmarks</span></label>
+            <label class="hud-toggle"><input type="checkbox" data-layer="labels" checked><span>Labels</span></label>
+            <label class="hud-toggle"><input type="checkbox" data-layer="rings" checked><span>Range rings</span></label>
+            <label class="hud-toggle"><input type="checkbox" data-layer="sweep" checked><span>Scan sweep</span></label>
+          </div>
+
+          <div class="map-hud map-hud--bl">
+            <div class="hud-title">Legend</div>
+            <div class="legend-grid">
+              <span><i class="lg-dot" style="--c:#34d399"></i>Ready</span>
+              <span><i class="lg-dot" style="--c:#38bdf8"></i>En route</span>
+              <span><i class="lg-dot" style="--c:#a78bfa"></i>On scene</span>
+              <span><i class="lg-dot" style="--c:#facc15"></i>Returning</span>
+              <span><i class="lg-dot" style="--c:#f87171"></i>Out of service</span>
+              <span><i class="lg-dot" style="--c:#fbbf24"></i>Unconfirmed</span>
+            </div>
+            <div class="legend-sep"></div>
+            <div class="legend-grid">
+              <span><i class="lg-ring" style="--c:#ff4d4d"></i>P1 critical</span>
+              <span><i class="lg-ring" style="--c:#ff8a3d"></i>P2 high</span>
+              <span><i class="lg-ring" style="--c:#ffd23d"></i>P3 moderate</span>
+              <span><i class="lg-ring" style="--c:#2dd4bf"></i>P4–P5 low</span>
+            </div>
+          </div>
+
+          <div class="map-hud map-hud--br map-controls">
+            <button class="map-btn" id="btn-zoom-in" data-tip="Zoom in">+</button>
+            <button class="map-btn" id="btn-zoom-out" data-tip="Zoom out">−</button>
+            <button class="map-btn" id="btn-fit" data-tip="Fit everything on screen (F)">⤢</button>
+            <button class="map-btn" id="btn-recenter" data-tip="Recentre on Delhi (R)">⌖</button>
+          </div>
+
+          <div class="pick-banner" id="pick-banner">
+            <span>Click anywhere on the map to set the location.</span>
+            <button class="btn btn-secondary btn-sm" id="btn-cancel-pick">Cancel</button>
+          </div>
+
+          <div class="map-tooltip" id="map-tooltip"></div>
+
+          <div class="map-empty" id="map-empty">
+            <div class="map-empty__card">
+              <div class="map-empty__title">The map is empty</div>
+              <p>Add units and zones, or load the Delhi sample scenario to see the system working.</p>
+              <button class="btn btn-primary" id="btn-empty-demo">Load sample data</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Right rail -->
+        <aside class="rail rail--right" id="detail-rail">
+          <div id="detail-summary"></div>
+          <div id="detail-entity" class="hidden"></div>
+        </aside>
+
+      </div>
+    </div>
+
+    <!-- ── APPROVALS ──────────────────────────────────────────────────── -->
+    <div class="tab-panel" id="tab-approvals">
+      <div class="page-head">
+        <div>
+          <h2>Approvals</h2>
+          <p class="page-sub">
+            Nothing is dispatched until you say so. Review the planner's
+            recommendation, then approve it, send a different unit, or reject it.
+          </p>
+        </div>
+        <div class="page-head__actions">
+          <button class="btn btn-secondary" id="btn-manual-dispatch">Send a unit manually</button>
+          <button class="btn btn-primary" id="btn-plan-dispatch">▶ Plan a dispatch</button>
+        </div>
+      </div>
+      <div id="pending-list"></div>
+    </div>
+
+    <!-- ── NETWORK ────────────────────────────────────────────────────── -->
+    <div class="tab-panel" id="tab-network">
+      <div class="page-head">
+        <div>
+          <h2>Network</h2>
+          <p class="page-sub">
+            The health of this command post and its links to the others. You only
+            need this screen when something looks wrong on Operations.
+          </p>
+        </div>
+      </div>
+
+      <div class="net-grid">
+        <div class="panel panel--wide">
+          <div class="panel-header"><span class="panel-title">Status at a glance</span></div>
+          <div class="panel-body">
+            <div class="net-verdict" id="net-verdict">
+              <span class="net-verdict__dot"></span>
+              <div>
+                <div class="net-verdict__headline" id="net-headline">Checking…</div>
+                <div class="net-verdict__detail" id="net-detail">—</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">This command post</span></div>
+          <div class="panel-body">
+            <div class="kv-row"><span class="kv-key" data-tip="The name this server answers to.">Name</span><span class="kv-val" id="cl-node-id">—</span></div>
+            <div class="kv-row"><span class="kv-key" data-tip="Leader writes changes; follower copies them; candidate is mid-election.">Role</span><span class="kv-val" id="cl-state">—</span></div>
+            <div class="kv-row"><span class="kv-key" data-tip="Which post is currently in charge of writes.">Current leader</span><span class="kv-val" id="cl-leader">—</span></div>
+            <div class="kv-row"><span class="kv-key" data-tip="Goes up by one each time a new leader is elected.">Round</span><span class="kv-val" id="cl-term">—</span></div>
+            <div class="kv-row"><span class="kv-key" data-tip="Changes a majority has stored. These can never be lost.">Agreed changes</span><span class="kv-val" id="cl-commit">—</span></div>
+            <div class="kv-row"><span class="kv-key" data-tip="Everything written so far, agreed or still replicating.">Total changes</span><span class="kv-val" id="cl-log">—</span></div>
+            <div class="kv-row"><span class="kv-key" data-tip="Whether this post has lost contact with the majority.">Isolated</span><span class="kv-val" id="cl-partition">—</span></div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-header"><span class="panel-title">Readiness</span></div>
+          <div class="panel-body">
+            <div style="margin-bottom:14px;"><span class="health-indicator" id="cl-health-badge">—</span></div>
+            <div class="kv-row"><span class="kv-key" data-tip="How many posts must agree before a change counts, out of how many exist.">Majority needed</span><span class="kv-val" id="cl-quorum">—</span></div>
+            <div class="kv-row"><span class="kv-key">Units tracked</span><span class="kv-val" id="cl-res-count">—</span></div>
+            <div class="kv-row"><span class="kv-key">Zones tracked</span><span class="kv-val" id="cl-zone-count">—</span></div>
+          </div>
+        </div>
+
+        <div class="panel panel--wide">
+          <div class="panel-header">
+            <span class="panel-title">Other command posts</span>
+            <span class="panel-note">How far each peer has caught up with this post's records.</span>
+          </div>
+          <div class="panel-body">
+            <table class="data-table">
+              <thead><tr><th>Command post</th><th>Next record to send</th><th>Confirmed up to</th></tr></thead>
+              <tbody id="cl-peer-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── HISTORY ────────────────────────────────────────────────────── -->
+    <div class="tab-panel" id="tab-history">
+      <div class="page-head">
+        <div>
+          <h2>History</h2>
+          <p class="page-sub">
+            A permanent, ordered record of every AI recommendation and every human
+            decision. Entries are never edited or deleted.
+          </p>
+        </div>
+        <button class="btn btn-secondary btn-sm" id="btn-audit-refresh">Refresh</button>
+      </div>
+
+      <div class="audit-filters">
+        <select id="audit-filter-action">
+          <option value="">Everything</option>
+          <optgroup label="AI planner">
+            <option value="ai_damage_assessment">Damage assessment</option>
+            <option value="ai_resource_match">Unit matching</option>
+            <option value="ai_route_plan">Route planning</option>
+            <option value="ai_protocol_lookup">Protocol lookup</option>
+            <option value="ai_decision">Final recommendation</option>
+            <option value="ai_fallback">Fallback (rules, not AI)</option>
+          </optgroup>
+          <optgroup label="Commander">
+            <option value="ic_confirm">Approved</option>
+            <option value="ic_reject">Rejected</option>
+            <option value="ic_override">Overridden</option>
+            <option value="ic_timeout">Expired without a decision</option>
+          </optgroup>
+          <optgroup label="Units">
+            <option value="resource_dispatched">Dispatched</option>
+            <option value="resource_arrived">Arrived</option>
+            <option value="resource_returned">Returned</option>
+          </optgroup>
+          <optgroup label="System">
+            <option value="partition_detected">Lost contact</option>
+            <option value="partition_healed">Contact restored</option>
+            <option value="system_error">Error</option>
+          </optgroup>
+        </select>
+        <input type="text" id="audit-filter-resource" placeholder="Filter by unit ID">
+        <input type="text" id="audit-filter-zone" placeholder="Filter by zone ID">
+        <button class="btn btn-secondary btn-sm" id="btn-audit-filter">Apply</button>
+      </div>
+
+      <div class="table-scroll">
+        <table class="data-table audit-table">
+          <thead>
+            <tr>
+              <th>When</th><th>What happened</th><th>Who</th>
+              <th>Reasoning</th><th>Confidence</th><th data-tip="Position in the permanent record.">Record #</th>
+            </tr>
+          </thead>
+          <tbody id="audit-tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty-state hidden" id="audit-empty">
+        Nothing has happened yet. Approvals and AI recommendations will appear here.
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════════════
+     MODALS
+     ═══════════════════════════════════════════════════════════════════════ -->
+
+<!-- Add unit -->
+<div class="modal-backdrop" id="modal-unit">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2>Add a unit</h2>
+        <p class="modal-sub">A vehicle or team that can be sent to a disaster zone.</p>
+      </div>
+      <button class="icon-btn" data-close="modal-unit" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="res-name">Name <em>required</em></label>
+          <input type="text" id="res-name" placeholder="CATS ALS Ambulance 102">
+        </div>
+        <div class="form-group">
+          <label for="res-callsign">Radio callsign <em>required</em></label>
+          <input type="text" id="res-callsign" placeholder="CATS-102" maxlength="20">
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="res-type">Type</label>
+          <select id="res-type">
+            <option value="ambulance">Ambulance</option>
+            <option value="ambulance_als">Ambulance — advanced life support</option>
+            <option value="fire_engine">Fire engine</option>
+            <option value="hazmat_team">HAZMAT team</option>
+            <option value="helicopter_transport">Helicopter — transport</option>
+            <option value="helicopter_medical">Helicopter — medical</option>
+            <option value="helicopter_heavy_lift">Helicopter — heavy lift</option>
+            <option value="sar_team_urban">Rescue team — urban</option>
+            <option value="sar_team_water">Rescue team — water / flood</option>
+            <option value="sar_team_mountain">Rescue team — rough terrain</option>
+            <option value="evacuation_bus">Evacuation bus</option>
+            <option value="supply_truck">Supply truck</option>
+            <option value="water_tanker">Water tanker</option>
+            <option value="generator">Generator</option>
+            <option value="field_hospital">Field hospital</option>
+            <option value="k9_unit">K9 unit</option>
+            <option value="drone_team">Drone team</option>
+            <option value="engineering_unit">Engineering / debris clearing</option>
+          </select>
+          <p class="field-hint" id="res-type-hint">Picking a type suggests sensible capabilities below.</p>
+        </div>
+        <div class="form-group">
+          <label for="res-agency">Owned by <em>required</em></label>
+          <input type="text" id="res-agency" list="agency-list" placeholder="Delhi Fire Service (DFS)">
+          <datalist id="agency-list">
+            <option>Delhi Fire Service (DFS)</option>
+            <option>CATS Ambulance Service</option>
+            <option>Delhi Police</option>
+            <option>NDRF Delhi-NCR</option>
+            <option>DDMA / Flood Control</option>
+            <option>Western Air Command</option>
+            <option>Delhi Jal Board</option>
+            <option>PWD Delhi</option>
+          </datalist>
+        </div>
+      </div>
+
+      <div class="location-picker">
+        <div class="location-picker__head">
+          <label>Home base location <em>required</em></label>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-pick-unit">⌖ Pick on map</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="res-preset">Quick pick a Delhi location</label>
+            <select id="res-preset"><option value="">Choose a place…</option></select>
+          </div>
+          <div class="form-group form-group--pair">
+            <div>
+              <label for="res-lat">Latitude</label>
+              <input type="number" id="res-lat" step="0.0001" placeholder="28.6304">
+            </div>
+            <div>
+              <label for="res-lng">Longitude</label>
+              <input type="number" id="res-lng" step="0.0001" placeholder="77.2200">
+            </div>
+          </div>
+        </div>
+        <p class="field-hint" id="res-loc-hint">No location set yet.</p>
+      </div>
+
+      <details class="advanced">
+        <summary>Capabilities and limits <span>optional — used by the AI planner for matching</span></summary>
+        <div class="advanced-body">
+          <div class="checkbox-grid">
+            <label class="checkbox-item"><input type="checkbox" id="cap-sar"> Search &amp; rescue</label>
+            <label class="checkbox-item"><input type="checkbox" id="cap-medical"> Medical treatment</label>
+            <label class="checkbox-item"><input type="checkbox" id="cap-firefighting"> Firefighting</label>
+            <label class="checkbox-item"><input type="checkbox" id="cap-hazmat"> HAZMAT</label>
+            <label class="checkbox-item"><input type="checkbox" id="cap-water-rescue"> Water rescue</label>
+            <label class="checkbox-item"><input type="checkbox" id="cap-air"> Can reach by air</label>
+            <label class="checkbox-item"><input type="checkbox" id="cap-thermal"> Thermal imaging</label>
+            <label class="checkbox-item"><input type="checkbox" id="cap-listening"> Life-detection gear</label>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="res-personnel">Crew size</label>
+              <input type="number" id="res-personnel" min="0" value="4">
+            </div>
+            <div class="form-group">
+              <label for="res-range">Range (km)</label>
+              <input type="number" id="res-range" min="0" step="1" value="80">
+            </div>
+            <div class="form-group">
+              <label for="res-fuel">Fuel / endurance (hours)</label>
+              <input type="number" id="res-fuel" min="0" step="0.5" value="8">
+            </div>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close="modal-unit">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-unit">Add unit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add zone -->
+<div class="modal-backdrop" id="modal-zone">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2>Add a zone</h2>
+        <p class="modal-sub">An affected area that needs help. Units get dispatched to zones.</p>
+      </div>
+      <button class="icon-btn" data-close="modal-zone" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label for="zone-name">Name <em>required</em></label>
+          <input type="text" id="zone-name" placeholder="Connaught Place &amp; Metro Hub">
+        </div>
+        <div class="form-group">
+          <label for="zone-code">Short code <em>required</em></label>
+          <input type="text" id="zone-code" placeholder="DEL-CP" maxlength="10">
+        </div>
+      </div>
+
+      <div class="location-picker">
+        <div class="location-picker__head">
+          <label>Centre of the affected area <em>required</em></label>
+          <button type="button" class="btn btn-ghost btn-sm" id="btn-pick-zone">⌖ Pick on map</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label for="zone-preset">Quick pick a Delhi location</label>
+            <select id="zone-preset"><option value="">Choose a place…</option></select>
+          </div>
+          <div class="form-group form-group--pair">
+            <div>
+              <label for="zone-lat">Latitude</label>
+              <input type="number" id="zone-lat" step="0.0001" placeholder="28.6315">
+            </div>
+            <div>
+              <label for="zone-lng">Longitude</label>
+              <input type="number" id="zone-lng" step="0.0001" placeholder="77.2167">
+            </div>
+          </div>
+        </div>
+        <p class="field-hint" id="zone-loc-hint">No location set yet.</p>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="zone-radius">Radius affected (km)</label>
+          <input type="number" id="zone-radius" step="0.1" min="0.1" value="2.0">
+        </div>
+        <div class="form-group">
+          <label for="zone-priority">How urgent is it?</label>
+          <select id="zone-priority">
+            <option value="1">P1 — Critical: lives at immediate risk</option>
+            <option value="2">P2 — High: serious casualties, urgent</option>
+            <option value="3" selected>P3 — Moderate: damage, no immediate threat</option>
+            <option value="4">P4 — Low: minor, can wait</option>
+            <option value="5">P5 — Minimal: no help needed</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="zone-damage">Damage</label>
+          <select id="zone-damage">
+            <option value="unknown">Not assessed yet</option>
+            <option value="none">None</option>
+            <option value="light">Light — under 10% of buildings</option>
+            <option value="moderate">Moderate — 10–40%</option>
+            <option value="severe">Severe — 40–70%</option>
+            <option value="catastrophic">Catastrophic — over 70%</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="zone-access">Can responders get in?</label>
+          <select id="zone-access">
+            <option value="unknown">Not known</option>
+            <option value="open">Yes — roads clear</option>
+            <option value="restricted">Partly — some routes blocked</option>
+            <option value="air_only">By air only</option>
+            <option value="water_only">By boat only</option>
+            <option value="cut_off">No known route</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="zone-address">Describe the location <span class="label-opt">optional</span></label>
+        <input type="text" id="zone-address" placeholder="Inner &amp; Outer Circle, Rajiv Chowk metro interchange">
+      </div>
+
+      <details class="advanced" open>
+        <summary>What does this zone need? <span>drives the AI planner's matching</span></summary>
+        <div class="advanced-body">
+          <div class="checkbox-grid">
+            <label class="checkbox-item"><input type="checkbox" id="need-sar"> Search &amp; rescue</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-medical"> Medical</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-evacuation"> Evacuation</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-firefighting"> Firefighting</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-hazmat"> HAZMAT</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-water"> Drinking water</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-food"> Food</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-shelter"> Shelter</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-power"> Power</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-engineering"> Debris clearing</label>
+            <label class="checkbox-item"><input type="checkbox" id="need-comms"> Communications</label>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label for="zone-trapped">People trapped</label><input type="number" id="zone-trapped" min="0" value="0"></div>
+            <div class="form-group"><label for="zone-injured">People injured</label><input type="number" id="zone-injured" min="0" value="0"></div>
+            <div class="form-group"><label for="zone-displaced">People displaced</label><input type="number" id="zone-displaced" min="0" value="0"></div>
+            <div class="form-group"><label for="zone-population">Total population</label><input type="number" id="zone-population" min="0" value="0"></div>
+          </div>
+        </div>
+      </details>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close="modal-zone">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-zone">Add zone</button>
+    </div>
+  </div>
+</div>
+
+<!-- Send a unit manually (no AI needed) -->
+<div class="modal-backdrop" id="modal-manual">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2>Send a unit</h2>
+        <p class="modal-sub">
+          Propose a dispatch yourself, without the AI planner. It still goes to
+          <em>Approvals</em> for confirmation — that gate is never skipped.
+        </p>
+      </div>
+      <button class="icon-btn" data-close="modal-manual" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="manual-zone">Send to which zone?</label>
+        <select id="manual-zone"></select>
+      </div>
+      <div class="form-group">
+        <label for="manual-unit">Which unit?</label>
+        <select id="manual-unit"></select>
+        <p class="field-hint" id="manual-unit-hint">Only units that are ready can be sent. Nearest first.</p>
+      </div>
+      <div class="form-group">
+        <label for="manual-reason">Why this unit? <span class="label-opt">optional, goes on the record</span></label>
+        <input type="text" id="manual-reason" placeholder="Closest ready unit with the right equipment">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close="modal-manual">Cancel</button>
+      <button class="btn btn-primary" id="btn-submit-manual">Send for approval</button>
+    </div>
+  </div>
+</div>
+
+<!-- Plan a dispatch -->
+<div class="modal-backdrop" id="modal-pipeline">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <h2>Plan a dispatch</h2>
+        <p class="modal-sub">
+          Describe what is happening. Five AI agents assess the damage, match a
+          unit, check protocol and plan a route — then hand you a recommendation
+          to approve.
+        </p>
+      </div>
+      <button class="icon-btn" data-close="modal-pipeline" aria-label="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label for="pipe-zone">Which zone needs help?</label>
+        <select id="pipe-zone"></select>
+      </div>
+
+      <div class="form-group">
+        <label for="pipe-description">What is happening there?</label>
+        <textarea id="pipe-description" rows="4" placeholder="Multi-storey building collapse at the metro interchange. Around 40 people believed trapped under slab debris. Gas leak reported on the east side."></textarea>
+        <div class="example-chips" id="pipe-examples">
+          <span class="example-chips__label">Or start from an example:</span>
+          <button type="button" class="echip" data-example="collapse">Building collapse</button>
+          <button type="button" class="echip" data-example="flood">Yamuna flooding</button>
+          <button type="button" class="echip" data-example="fire">Industrial fire</button>
+          <button type="button" class="echip" data-example="chemical">Chemical leak</button>
+        </div>
+      </div>
+
+      <details class="advanced">
+        <summary>Incident reference <span>auto-generated</span></summary>
+        <div class="advanced-body">
+          <div class="form-group">
+            <label for="pipe-incident-id">Incident ID</label>
+            <input type="text" id="pipe-incident-id">
+          </div>
+        </div>
+      </details>
+
+      <div class="pipeline-progress hidden" id="pipeline-progress">
+        <div class="pipeline-stage" data-stage="damage"><b>Damage assessment</b><span>How bad is it?</span></div>
+        <div class="pipeline-stage" data-stage="match"><b>Unit matching</b><span>Who can handle it?</span></div>
+        <div class="pipeline-stage" data-stage="protocol"><b>Protocol lookup</b><span>What do the rules say?</span></div>
+        <div class="pipeline-stage" data-stage="route"><b>Route planning</b><span>How do they get there?</span></div>
+        <div class="pipeline-stage" data-stage="decision"><b>Recommendation</b><span>Final call for you</span></div>
+      </div>
+
+      <div id="pipeline-result" class="hidden"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" data-close="modal-pipeline">Cancel</button>
+      <button class="btn btn-primary" id="btn-run-pipeline">▶ Run the planner</button>
+    </div>
+  </div>
+</div>
+
+<script src="delhi.js"></script>
+<script src="radar.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
