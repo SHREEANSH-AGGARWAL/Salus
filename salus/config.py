@@ -72,7 +72,7 @@ class APIConfig(BaseSettings):
 class RAGConfig(BaseSettings):
     """RAG knowledge layer settings."""
 
-    embedding_model: str = Field("all-MiniLM-L6-v2", description="Sentence-transformer model name")
+    embedding_model: str = Field("./salus/models/all-MiniLM-L6-v2", description="Sentence-transformer model name")
     chroma_persist_dir: str = Field("./data/chroma", description="ChromaDB persistence directory")
     chunk_size: int = Field(1000, ge=100, description="Document chunk size (characters)")
     chunk_overlap: int = Field(200, ge=0, description="Chunk overlap (characters)")
