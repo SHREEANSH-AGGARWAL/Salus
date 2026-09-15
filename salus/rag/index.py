@@ -105,6 +105,8 @@ class KnowledgeIndex:
             return
 
         try:
+            import os
+
             import chromadb
             from chromadb.utils.embedding_functions.sentence_transformer_embedding_function import (
                 SentenceTransformerEmbeddingFunction,
@@ -114,10 +116,15 @@ class KnowledgeIndex:
                 "ChromaDB is not installed. Install the AI extras: pip install 'salus[ai]'"
             ) from e
 
+        # Force offline mode so sentence-transformers and huggingface_hub never
+        # attempt network calls — the model is bundled locally in salus/models/.
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")
+        os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
         self._client = chromadb.PersistentClient(path=self.config.chroma_persist_dir)
         self._embedding_fn = SentenceTransformerEmbeddingFunction(
             model_name=self.config.embedding_model
-        )  # fix this later cant get sentence transformer to work
+        )
         self._collection = self._client.get_or_create_collection(
             name=self.COLLECTION_NAME,
             # pyrefly: ignore [bad-argument-type]
